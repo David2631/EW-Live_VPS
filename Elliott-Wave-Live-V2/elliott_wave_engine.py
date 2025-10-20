@@ -23,6 +23,7 @@ class Pivot:
 class Impulse:
     direction: Direction
     pivots: List[Pivot]  # 6 pivots for 5-wave structure
+    confidence: float = 75.0  # Default confidence
     
     def get_wave_1(self) -> Tuple[float, float]:
         return self.pivots[0].price, self.pivots[1].price
@@ -32,11 +33,46 @@ class Impulse:
     
     def get_wave_5(self) -> Tuple[float, float]:
         return self.pivots[4].price, self.pivots[5].price
+    
+    # Compatibility properties for Signal Generator
+    @property
+    def wave_1_end(self) -> Pivot:
+        return self.pivots[1] if len(self.pivots) > 1 else None
+    
+    @property 
+    def wave_2_end(self) -> Pivot:
+        return self.pivots[2] if len(self.pivots) > 2 else None
+    
+    @property
+    def wave_3_end(self) -> Pivot:
+        return self.pivots[3] if len(self.pivots) > 3 else None
+    
+    @property
+    def wave_4_end(self) -> Pivot:
+        return self.pivots[4] if len(self.pivots) > 4 else None
+    
+    @property
+    def wave_5_end(self) -> Pivot:
+        return self.pivots[5] if len(self.pivots) > 5 else None
 
 @dataclass
 class ABC:
     direction: Direction
     pivots: List[Pivot]  # 4 pivots for A-B-C structure
+    confidence: float = 65.0  # Default confidence
+    
+    # Compatibility properties for Signal Generator
+    @property
+    def a_end(self) -> Pivot:
+        return self.pivots[1] if len(self.pivots) > 1 else None
+    
+    @property
+    def b_end(self) -> Pivot:
+        return self.pivots[2] if len(self.pivots) > 2 else None
+    
+    @property
+    def c_end(self) -> Pivot:
+        return self.pivots[3] if len(self.pivots) > 3 else None
 
 class ElliottWaveEngine:
     """
