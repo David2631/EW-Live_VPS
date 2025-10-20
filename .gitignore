@@ -1,0 +1,85 @@
+# .gitignore for Elliott Wave Trading System
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Trading Logs
+*.log
+logs/
+monitor_*.log
+trading_*.log
+error_*.log
+
+# Configuration (sensitive)
+.env
+*.key
+*.secret
+
+# Trading Data
+trades_*.csv
+backtest_results/
+performance_reports/
+
+# System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary Files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# MT5 specific
+*.ex5
+*.mq5~
+MQL5/
+Experts/Advisors/
+Experts/Indicators/
+
+# Test Results
+test_results.json
+test_output/
+
+# Monitor Config (may contain sensitive email settings)
+monitor_config.json
+
+# Backup Files
+*.bak
+*.backup
+backup_*/

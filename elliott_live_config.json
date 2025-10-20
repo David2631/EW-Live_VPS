@@ -1,0 +1,38 @@
+{
+  "symbol": "EURUSD",
+  "timeframe": 30,
+  "risk_per_trade": 0.02,
+  "max_daily_loss": 0.05,
+  "max_daily_trades": 10,
+  "use_trailing_stop": true,
+  "trailing_distance_atr": 2.0,
+  "stop_loss_atr": 2.5,
+  "take_profit_atr": 5.0,
+  "min_atr_filter": 0.0001,
+  "max_spread": 30,
+  "magic_number": 234567,
+  "analysis_interval": 300,
+  "trading_hours": {
+    "start": "08:00",
+    "end": "18:00",
+    "timezone": "UTC"
+  },
+  "risk_management": {
+    "max_drawdown_stop": 0.10,
+    "max_consecutive_losses": 5,
+    "position_sizing_method": "fixed_risk",
+    "emergency_stop_conditions": [
+      "daily_loss_limit",
+      "max_drawdown",
+      "connection_loss"
+    ]
+  },
+  "notification": {
+    "enable_email": false,
+    "email_on_trade": true,
+    "email_on_error": true,
+    "enable_telegram": false,
+    "telegram_bot_token": "",
+    "telegram_chat_id": ""
+  }
+}
