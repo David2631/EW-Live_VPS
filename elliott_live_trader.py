@@ -195,7 +195,7 @@ class ElliottWaveLiveTrader:
         
         return df
     
-    def analyze_elliott_wave_live(self, df: pd.DataFrame) -> Dict:
+    def analyze_elliott_wave_live(self, df: pd.DataFrame, symbol_config: Dict = None) -> Dict:
         """
         Live Elliott Wave analysis - adapted from backtest system
         CRITICAL: Only uses completed bars, no future information
@@ -234,8 +234,11 @@ class ElliottWaveLiveTrader:
             ema_slow = df['ema_slow'].iloc[-1]
             trend_up = ema_fast > ema_slow
             
+            # Get minimum ATR filter for this symbol
+            min_atr_filter = symbol_config.get('min_atr_filter', 0.0001) if symbol_config else 0.0001
+            
             # Wave 3 continuation signal (simplified)
-            if abs(price_change_5) > 0.01 and atr > self.config['min_atr_filter']:
+            if abs(price_change_5) > 0.01 and atr > min_atr_filter:
                 if trend_up and rsi_current < 80:
                     signal.update({
                         'action': 'BUY',
@@ -300,16 +303,8 @@ class ElliottWaveLiveTrader:
             self.emergency_stop = True
             return False
             
-        # Check spread
-        symbol_info = mt5.symbol_info(self.config['symbol'])
-        if symbol_info is None:
-            return False
-            
-        spread = symbol_info.spread
-        if spread > self.config['max_spread']:
-            self.logger.warning(f"Spread too high: {spread} points")
-            return False
-            
+        # For multi-asset trading, we don't need to check spread here
+        # Spread is checked per symbol in place_order()
         return True
     
     def calculate_position_size(self, risk_amount: float, stop_distance: float) -> float:
@@ -505,48 +500,52 @@ class ElliottWaveLiveTrader:
             return None
     
     def manage_position(self):
-        """Manage existing positions with trailing stops"""
-        if not self.current_position:
+        """Manage existing positions with trailing stops for multi-asset trading"""
+        if not self.config.get('use_trailing_stop', False):
             return
             
         try:
-            # Check if position still exists
-            if not mt5.positions_get(ticket=self.current_position['ticket']):
-                self.logger.info("Position closed")
-                self.current_position = None
+            # Get all open positions
+            positions = mt5.positions_get()
+            if not positions:
                 return
                 
-            if not self.config['use_trailing_stop']:
-                return
+            # Manage each position with our magic number
+            for position in positions:
+                if position.magic != self.config['magic_number']:
+                    continue
+                    
+                symbol = position.symbol
                 
-            # Get current market data for trailing stop
-            df = self.get_live_data(self.config['symbol'], self.config['timeframe'], 20)
-            if df is None or len(df) == 0:
-                return
+                # Get current market data for this symbol
+                df = self.get_live_data(symbol, self.config['timeframe'])
+                if df is None or len(df) == 0:
+                    continue
+                    
+                current_price = df['close'].iloc[-1]
+                atr = df['atr'].iloc[-1] if 'atr' in df.columns else 0.001
+                trailing_distance = atr * self.config.get('trailing_distance_atr', 2.0)
                 
-            current_price = df['close'].iloc[-1]
-            atr = df['atr'].iloc[-1]
-            trailing_distance = atr * self.config['trailing_distance_atr']
-            
-            # Calculate new trailing stop
-            if self.current_position['type'] == 'BUY':
-                new_sl = current_price - trailing_distance
-                if new_sl > self.current_position['stop_loss']:
-                    self.modify_position(new_sl, self.current_position['take_profit'])
-            else:  # SELL
-                new_sl = current_price + trailing_distance
-                if new_sl < self.current_position['stop_loss']:
-                    self.modify_position(new_sl, self.current_position['take_profit'])
+                # Calculate new trailing stop
+                if position.type == mt5.ORDER_TYPE_BUY:
+                    new_sl = current_price - trailing_distance
+                    if new_sl > position.sl:
+                        self.modify_position_by_ticket(position.ticket, symbol, new_sl, position.tp)
+                elif position.type == mt5.ORDER_TYPE_SELL:
+                    new_sl = current_price + trailing_distance
+                    if new_sl < position.sl:
+                        self.modify_position_by_ticket(position.ticket, symbol, new_sl, position.tp)
                     
         except Exception as e:
-            self.logger.error(f"Error managing position: {e}")
+            self.logger.error(f"Error managing positions: {e}")
     
-    def modify_position(self, new_sl: float, new_tp: float):
-        """Modify position stop loss and take profit"""
+    def modify_position_by_ticket(self, ticket: int, symbol: str, new_sl: float, new_tp: float):
+        """Modify specific position by ticket"""
         try:
             request = {
                 "action": mt5.TRADE_ACTION_SLTP,
-                "symbol": self.config['symbol'],
+                "position": ticket,
+                "symbol": symbol,
                 "sl": new_sl,
                 "tp": new_tp,
                 "magic": self.config['magic_number'],
@@ -554,14 +553,12 @@ class ElliottWaveLiveTrader:
             
             result = mt5.order_send(request)
             if result.retcode == mt5.TRADE_RETCODE_DONE:
-                self.logger.info(f"Position modified - New SL: {new_sl:.5f}")
-                if self.current_position:
-                    self.current_position['stop_loss'] = new_sl
+                self.logger.info(f"{symbol} Position {ticket} modified - New SL: {new_sl:.5f}")
             else:
-                self.logger.error(f"Failed to modify position: {result.comment}")
+                self.logger.error(f"{symbol} Failed to modify position {ticket}: {result.comment}")
                 
         except Exception as e:
-            self.logger.error(f"Error modifying position: {e}")
+            self.logger.error(f"Error modifying position {ticket}: {e}")
     
     def update_daily_pnl(self):
         """Update daily P&L tracking"""
@@ -580,8 +577,8 @@ class ElliottWaveLiveTrader:
                         if deal.entry == mt5.DEAL_ENTRY_IN:
                             daily_trades += 1
                             
-            # Add current open position P&L
-            positions = mt5.positions_get(symbol=self.config['symbol'])
+            # Add current open position P&L for all symbols
+            positions = mt5.positions_get()
             if positions:
                 for pos in positions:
                     if pos.magic == self.config['magic_number']:
@@ -639,7 +636,7 @@ class ElliottWaveLiveTrader:
                                 continue
                             
                             # Analyze Elliott Wave patterns
-                            signal = self.analyze_elliott_wave_live(df)
+                            signal = self.analyze_elliott_wave_live(df, symbol_config)
                             signal['symbol'] = symbol
                             signal['symbol_config'] = symbol_config
                             
