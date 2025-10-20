@@ -10,13 +10,15 @@
 ## ✨ Features
 
 - 🌊 **Full Elliott Wave Analysis** - Complete wave pattern detection and trading
-- 📊 **ATR-based Risk Management** - Dynamic stop loss and take profit levels
-- 🛡️ **Advanced Risk Controls** - Position sizing, daily limits, emergency stops
-- 🔄 **Trailing Stops** - Automatic profit protection
-- 📈 **Multi-timeframe Analysis** - Robust signal confirmation
-- 🖥️ **VPS Optimized** - 24/7 automated trading capability
+- 📊 **Multi-Asset Support** - Trade EURUSD, XAUUSD, US30, US500.f, NAS100, AUDNOK simultaneously
+- ⏰ **1-Minute Scanning** - Analyzes all symbols every 60 seconds for optimal entry timing
+- 📊 **ATR-based Risk Management** - Dynamic stop loss and take profit levels per symbol
+- 🛡️ **Advanced Risk Controls** - Individual position sizing, daily limits, emergency stops
+- 🔄 **Trailing Stops** - Automatic profit protection across all positions
+- 📈 **Multi-timeframe Analysis** - Robust signal confirmation for each asset
+- 🖥️ **VPS Optimized** - 24/7 automated trading capability with up to 6 simultaneous positions
 - 🇩🇪 **German MT5 Support** - Full Deutsche interface compatibility
-- 📊 **Real-time Monitoring** - Performance tracking and alerts
+- 📊 **Real-time Monitoring** - Performance tracking and alerts for all symbols
 
 ## 🚀 Quick Start (VPS Installation)
 
@@ -67,16 +69,33 @@ This will:
 - Validate system configuration
 - Run comprehensive tests
 
-#### 3. **Configure Trading Parameters**
+#### 4. **Configure Trading Parameters**
 Edit `elliott_live_config.json`:
 ```json
 {
-  "symbol": "EURUSD",
-  "risk_per_trade": 0.02,
-  "max_daily_loss": 0.05,
-  "max_daily_trades": 10,
-  "stop_loss_atr": 2.5,
-  "take_profit_atr": 5.0
+  "symbols": [
+    {
+      "name": "EURUSD",
+      "risk_per_trade": 0.015,
+      "max_spread": 2,
+      "enabled": true
+    },
+    {
+      "name": "XAUUSD", 
+      "risk_per_trade": 0.015,
+      "max_spread": 50,
+      "enabled": true
+    },
+    {
+      "name": "US30",
+      "risk_per_trade": 0.015,
+      "max_spread": 5,
+      "enabled": true
+    }
+  ],
+  "analysis_interval": 60,
+  "max_total_positions": 6,
+  "max_daily_trades": 20
 }
 ```
 

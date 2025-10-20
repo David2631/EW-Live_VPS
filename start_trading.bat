@@ -1,5 +1,5 @@
 @echo off
-title Elliott Wave Live Trader
+title Elliott Wave Multi-Asset Live Trader
 
 REM Activate virtual environment if it exists
 if exist "venv\Scripts\activate.bat" (
@@ -8,7 +8,11 @@ if exist "venv\Scripts\activate.bat" (
 )
 
 echo ========================================
-echo Elliott Wave Live Trader - Starting...
+echo Elliott Wave Multi-Asset Trader
+echo ========================================
+echo 📊 Symbols: EURUSD, XAUUSD, US30, US500.f, NAS100, AUDNOK
+echo ⏰ Scanning: Every 60 seconds
+echo 🎯 Max Positions: 6 simultaneous
 echo ========================================
 echo.
 
@@ -31,13 +35,13 @@ if errorlevel 1 (
     pause
 )
 
-echo ✅ Starting Elliott Wave Live Trader...
+echo ✅ Starting Multi-Asset Elliott Wave Trader...
 echo.
 echo 🚨 Press Ctrl+C to stop trading
 echo.
 
 :start
-python elliott_live_trader.py
+python start_multi_asset_trading.py
 if errorlevel 1 (
     echo.
     echo ❌ Trading system stopped with error

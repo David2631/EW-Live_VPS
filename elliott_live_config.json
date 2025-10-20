@@ -1,20 +1,62 @@
 {
-  "symbol": "EURUSD",
+  "symbols": [
+    {
+      "name": "EURUSD",
+      "risk_per_trade": 0.015,
+      "max_spread": 2,
+      "min_atr_filter": 0.0001,
+      "enabled": true
+    },
+    {
+      "name": "XAUUSD",
+      "risk_per_trade": 0.015,
+      "max_spread": 50,
+      "min_atr_filter": 0.10,
+      "enabled": true
+    },
+    {
+      "name": "US30",
+      "risk_per_trade": 0.015,
+      "max_spread": 5,
+      "min_atr_filter": 1.0,
+      "enabled": true
+    },
+    {
+      "name": "US500.f",
+      "risk_per_trade": 0.015,
+      "max_spread": 5,
+      "min_atr_filter": 0.5,
+      "enabled": true
+    },
+    {
+      "name": "NAS100",
+      "risk_per_trade": 0.015,
+      "max_spread": 5,
+      "min_atr_filter": 2.0,
+      "enabled": true
+    },
+    {
+      "name": "AUDNOK",
+      "risk_per_trade": 0.010,
+      "max_spread": 20,
+      "min_atr_filter": 0.001,
+      "enabled": true
+    }
+  ],
   "timeframe": 30,
-  "risk_per_trade": 0.02,
+  "analysis_interval": 60,
   "max_daily_loss": 0.05,
-  "max_daily_trades": 10,
+  "max_daily_trades": 20,
+  "max_positions_per_symbol": 1,
+  "max_total_positions": 6,
   "use_trailing_stop": true,
   "trailing_distance_atr": 2.0,
   "stop_loss_atr": 2.5,
   "take_profit_atr": 5.0,
-  "min_atr_filter": 0.0001,
-  "max_spread": 30,
   "magic_number": 234567,
-  "analysis_interval": 300,
   "trading_hours": {
-    "start": "08:00",
-    "end": "18:00",
+    "start": "00:00",
+    "end": "23:59",
     "timezone": "UTC"
   },
   "risk_management": {

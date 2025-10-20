@@ -51,21 +51,28 @@ class ElliottWaveLiveTrader:
         self.logger = logging.getLogger(__name__)
         
     def load_config(self, config_file: str) -> dict:
-        """Load trading configuration"""
+        """Load trading configuration with multi-asset support"""
         default_config = {
-            "symbol": "EURUSD",
+            "symbols": [
+                {
+                    "name": "EURUSD",
+                    "risk_per_trade": 0.015,
+                    "max_spread": 2,
+                    "min_atr_filter": 0.0001,
+                    "enabled": True
+                }
+            ],
             "timeframe": mt5.TIMEFRAME_M30,
-            "risk_per_trade": 0.02,  # 2% risk per trade
+            "analysis_interval": 60,  # Analyze every 1 minute
             "max_daily_loss": 0.05,  # 5% max daily loss
-            "max_daily_trades": 10,
+            "max_daily_trades": 20,
+            "max_positions_per_symbol": 1,
+            "max_total_positions": 6,
             "use_trailing_stop": True,
             "trailing_distance_atr": 2.0,
             "stop_loss_atr": 2.5,
             "take_profit_atr": 5.0,
-            "min_atr_filter": 0.0001,  # Minimum volatility filter
-            "max_spread": 30,  # Maximum spread in points
             "magic_number": 234567,
-            "analysis_interval": 300,  # Analyze every 5 minutes
         }
         
         if os.path.exists(config_file):
@@ -162,40 +169,6 @@ class ElliottWaveLiveTrader:
         """Close MT5 connection"""
         mt5.shutdown()
         self.logger.info("MT5 connection closed")
-    
-    def get_live_data(self, symbol: str, timeframe: int, bars: int = 500) -> Optional[pd.DataFrame]:
-        """
-        Get live market data - CRITICAL: NO LOOKAHEAD BIAS!
-        Only returns COMPLETED bars, excludes current forming bar
-        """
-        try:
-            # Get rates from MT5
-            rates = mt5.copy_rates_from_pos(symbol, timeframe, 1, bars)  # Start from 1 to skip current bar
-            
-            if rates is None or len(rates) == 0:
-                self.logger.error(f"Failed to get market data for {symbol}")
-                return None
-                
-            # Convert to DataFrame
-            df = pd.DataFrame(rates)
-            df['time'] = pd.to_datetime(df['time'], unit='s')
-            df.rename(columns={
-                'time': 'date',
-                'open': 'open',
-                'high': 'high', 
-                'low': 'low',
-                'close': 'close',
-                'tick_volume': 'volume'
-            }, inplace=True)
-            
-            # Add technical indicators
-            df = self.add_indicators(df)
-            
-            return df
-            
-        except Exception as e:
-            self.logger.error(f"Error getting live data: {e}")
-            return None
     
     def add_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
         """Add technical indicators - adapted from backtest system"""
@@ -400,21 +373,43 @@ class ElliottWaveLiveTrader:
             return 0.0
     
     def place_order(self, signal: Dict) -> bool:
-        """Place order based on Elliott Wave signal"""
+        """Place order based on Elliott Wave signal for any symbol"""
         try:
             account_info = mt5.account_info()
             if account_info is None:
                 return False
+            
+            symbol = signal.get('symbol', 'EURUSD')
+            symbol_config = signal.get('symbol_config', {})
+            
+            # Calculate risk amount (use symbol-specific risk if available)
+            symbol_risk = symbol_config.get('risk_per_trade', 0.015)
+            risk_amount = account_info.balance * symbol_risk
+            
+            # Check spread
+            symbol_info = mt5.symbol_info(symbol)
+            if symbol_info is None:
+                self.logger.error(f"Cannot get symbol info for {symbol}")
+                return False
                 
-            # Calculate risk amount
-            risk_amount = account_info.balance * self.config['risk_per_trade']
+            current_spread = symbol_info.spread
+            max_spread = symbol_config.get('max_spread', 30)
+            
+            if current_spread > max_spread:
+                self.logger.warning(f"{symbol} spread too high: {current_spread} > {max_spread}")
+                return False
             
             # Get current price
+            tick = mt5.symbol_info_tick(symbol)
+            if tick is None:
+                self.logger.error(f"Cannot get tick data for {symbol}")
+                return False
+                
             if signal['action'] == 'BUY':
-                price = mt5.symbol_info_tick(self.config['symbol']).ask
+                price = tick.ask
                 order_type = mt5.ORDER_TYPE_BUY
             else:
-                price = mt5.symbol_info_tick(self.config['symbol']).bid
+                price = tick.bid
                 order_type = mt5.ORDER_TYPE_SELL
                 
             # Calculate position size
@@ -422,21 +417,21 @@ class ElliottWaveLiveTrader:
             lot_size = self.calculate_position_size(risk_amount, stop_distance)
             
             if lot_size <= 0:
-                self.logger.error("Invalid lot size calculated")
+                self.logger.error(f"Invalid lot size calculated for {symbol}")
                 return False
                 
             # Prepare order request
             request = {
                 "action": mt5.TRADE_ACTION_DEAL,
-                "symbol": self.config['symbol'],
+                "symbol": symbol,
                 "volume": lot_size,
                 "type": order_type,
                 "price": price,
                 "sl": signal['stop_loss'],
                 "tp": signal['take_profit'],
-                "deviation": 10,
+                "deviation": 20,  # Higher deviation for indices
                 "magic": self.config['magic_number'],
-                "comment": f"Elliott-{signal['setup_type']}",
+                "comment": f"Elliott-{signal['setup_type']}-{symbol}",
                 "type_time": mt5.ORDER_TIME_GTC,
                 "type_filling": mt5.ORDER_FILLING_IOC,
             }
@@ -445,24 +440,69 @@ class ElliottWaveLiveTrader:
             result = mt5.order_send(request)
             
             if result.retcode == mt5.TRADE_RETCODE_DONE:
-                self.logger.info(f"Order placed successfully: {signal['action']} {lot_size} lots at {price}")
+                self.logger.info(f"✅ {symbol} Order placed: {signal['action']} {lot_size} lots at {price} (Risk: €{risk_amount:.0f})")
                 self.daily_trades += 1
-                self.current_position = {
-                    'ticket': result.order,
-                    'type': signal['action'],
-                    'volume': lot_size,
-                    'entry_price': price,
-                    'stop_loss': signal['stop_loss'],
-                    'take_profit': signal['take_profit']
-                }
                 return True
             else:
-                self.logger.error(f"Order failed: {result.comment} (Code: {result.retcode})")
+                self.logger.error(f"❌ {symbol} Order failed: {result.comment} (Code: {result.retcode})")
                 return False
                 
         except Exception as e:
             self.logger.error(f"Error placing order: {e}")
             return False
+    
+    def has_position_for_symbol(self, symbol: str) -> bool:
+        """Check if we have an open position for the given symbol"""
+        try:
+            positions = mt5.positions_get(symbol=symbol)
+            if positions is None:
+                return False
+            return len(positions) > 0
+        except:
+            return False
+    
+    def get_total_positions(self) -> int:
+        """Get total number of open positions"""
+        try:
+            positions = mt5.positions_get()
+            if positions is None:
+                return 0
+            return len(positions)
+        except:
+            return 0
+    
+    def get_live_data(self, symbol: str, timeframe) -> pd.DataFrame:
+        """Get live market data for any symbol"""
+        try:
+            # Ensure symbol is available
+            symbol_info = mt5.symbol_info(symbol)
+            if symbol_info is None:
+                self.logger.warning(f"Symbol {symbol} not found")
+                return None
+            
+            if not symbol_info.visible:
+                if not mt5.symbol_select(symbol, True):
+                    self.logger.warning(f"Failed to select symbol {symbol}")
+                    return None
+            
+            # Get historical data
+            rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, 200)
+            if rates is None or len(rates) < 100:
+                self.logger.warning(f"Insufficient data for {symbol}")
+                return None
+            
+            # Convert to DataFrame
+            df = pd.DataFrame(rates)
+            df['time'] = pd.to_datetime(df['time'], unit='s')
+            
+            # Add technical indicators
+            df = self.add_indicators(df)
+            
+            return df
+            
+        except Exception as e:
+            self.logger.error(f"Error getting live data for {symbol}: {e}")
+            return None
     
     def manage_position(self):
         """Manage existing positions with trailing stops"""
@@ -570,26 +610,48 @@ class ElliottWaveLiveTrader:
                 # Manage existing positions
                 self.manage_position()
                 
-                # Check if we should analyze (don't analyze too frequently)
+                # Check if we should analyze (analyze every minute for all symbols)
                 current_time = datetime.now()
                 if (self.last_analysis_time is None or 
                     (current_time - self.last_analysis_time).seconds >= self.config['analysis_interval']):
                     
-                    # Get live market data
-                    df = self.get_live_data(self.config['symbol'], self.config['timeframe'])
-                    if df is None:
-                        self.logger.error("Failed to get market data")
-                        time.sleep(30)
-                        continue
-                    
-                    # Analyze Elliott Wave patterns
-                    signal = self.analyze_elliott_wave_live(df)
-                    
-                    # Execute signal if no current position
-                    if signal['action'] != 'HOLD' and self.current_position is None:
-                        if signal['confidence'] > 0.6:  # Minimum confidence threshold
-                            self.logger.info(f"Elliott Wave signal: {signal['action']} - {signal['setup_type']} (Confidence: {signal['confidence']:.2f})")
-                            self.place_order(signal)
+                    # Analyze all enabled symbols
+                    for symbol_config in self.config['symbols']:
+                        if not symbol_config.get('enabled', True):
+                            continue
+                            
+                        symbol = symbol_config['name']
+                        
+                        # Check if we already have a position for this symbol
+                        if self.has_position_for_symbol(symbol):
+                            continue
+                            
+                        # Check if we've reached max total positions
+                        if self.get_total_positions() >= self.config.get('max_total_positions', 6):
+                            self.logger.info("Maximum total positions reached, skipping new signals")
+                            break
+                        
+                        try:
+                            # Get live market data for this symbol
+                            df = self.get_live_data(symbol, self.config['timeframe'])
+                            if df is None:
+                                self.logger.warning(f"Failed to get market data for {symbol}")
+                                continue
+                            
+                            # Analyze Elliott Wave patterns
+                            signal = self.analyze_elliott_wave_live(df)
+                            signal['symbol'] = symbol
+                            signal['symbol_config'] = symbol_config
+                            
+                            # Execute signal if strong enough
+                            if signal['action'] != 'HOLD':
+                                if signal['confidence'] > 0.6:  # Minimum confidence threshold
+                                    self.logger.info(f"🌊 {symbol} Elliott Wave signal: {signal['action']} - {signal['setup_type']} (Confidence: {signal['confidence']:.2f})")
+                                    self.place_order(signal)
+                                    
+                        except Exception as e:
+                            self.logger.error(f"Error analyzing {symbol}: {e}")
+                            continue
                     
                     self.last_analysis_time = current_time
                 
