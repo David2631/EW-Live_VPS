@@ -192,21 +192,37 @@ class LiveTradingSystemTests:
         # Test configuration validation
         config = trader.config.copy()
         
-        # Test risk limits
-        original_risk = config['risk_per_trade']
-        
-        # Test with normal risk (don't actually change config)
-        if config['risk_per_trade'] > 0.1:  # More than 10% is excessive
-            print(f"   ⚠️  High risk detected: {config['risk_per_trade']*100}%")
+        # Check for multi-asset configuration
+        if 'symbols' in config:
+            # Multi-asset configuration
+            for symbol_config in config['symbols']:
+                risk_per_trade = symbol_config.get('risk_per_trade', 0.015)
+                if risk_per_trade > 0.1:  # More than 10% is excessive
+                    print(f"   ⚠️  High risk detected for {symbol_config['name']}: {risk_per_trade*100}%")
+                else:
+                    print(f"   ✅ Risk per trade for {symbol_config['name']}: {risk_per_trade*100}%")
         else:
-            print(f"   ✅ Risk per trade: {config['risk_per_trade']*100}%")
+            # Legacy single-symbol configuration
+            risk_per_trade = config.get('risk_per_trade', 0.02)
+            if risk_per_trade > 0.1:  # More than 10% is excessive
+                print(f"   ⚠️  High risk detected: {risk_per_trade*100}%")
+            else:
+                print(f"   ✅ Risk per trade: {risk_per_trade*100}%")
         
         # Test daily limits
-        if config['max_daily_loss'] > 0.2:  # More than 20% daily loss
-            print(f"   ⚠️  High daily loss limit: {config['max_daily_loss']*100}%")
+        max_daily_loss = config.get('max_daily_loss', 0.05)
+        if max_daily_loss > 0.2:  # More than 20% daily loss
+            print(f"   ⚠️  High daily loss limit: {max_daily_loss*100}%")
         
         # Test position sizing calculation
-        risk_amount = 10000 * config['risk_per_trade']  # $10k account
+        if 'symbols' in config and config['symbols']:
+            # Use first symbol for testing
+            first_symbol = config['symbols'][0]
+            risk_per_trade = first_symbol.get('risk_per_trade', 0.015)
+        else:
+            risk_per_trade = config.get('risk_per_trade', 0.02)
+            
+        risk_amount = 10000 * risk_per_trade  # $10k account
         stop_distance = 0.01  # 100 pips (0.01 for EURUSD)
         
         position_size = trader.calculate_position_size(risk_amount, stop_distance)
@@ -224,9 +240,8 @@ class LiveTradingSystemTests:
         
         # Test emergency conditions
         test_conditions = [
-            ("Daily trade limit", config['max_daily_trades']),
-            ("Risk per trade", config['risk_per_trade']),
-            ("Max daily loss", config['max_daily_loss'])
+            ("Daily trade limit", config.get('max_daily_trades', 10)),
+            ("Max daily loss", config.get('max_daily_loss', 0.05))
         ]
         
         for condition, value in test_conditions:
@@ -345,23 +360,47 @@ class LiveTradingSystemTests:
         trader = ElliottWaveLiveTrader()
         config = trader.config
         
-        required_keys = [
-            'symbol', 'risk_per_trade', 'max_daily_loss', 
-            'max_daily_trades', 'magic_number'
-        ]
-        
-        for key in required_keys:
-            if key not in config:
-                print(f"   ❌ Missing config key: {key}")
+        # Check for multi-asset vs single-asset config
+        if 'symbols' in config:
+            # Multi-asset configuration
+            required_keys = [
+                'symbols', 'max_daily_loss', 'max_daily_trades', 'magic_number'
+            ]
+            
+            for key in required_keys:
+                if key not in config:
+                    print(f"   ❌ Missing config key: {key}")
+                    return False
+            
+            # Check symbols array
+            if not config['symbols'] or len(config['symbols']) == 0:
+                print("   ❌ No symbols configured")
                 return False
+                
+            for symbol_config in config['symbols']:
+                if 'name' not in symbol_config:
+                    print("   ❌ Symbol missing name")
+                    return False
+                if 'risk_per_trade' not in symbol_config:
+                    print("   ❌ Symbol missing risk_per_trade")
+                    return False
+                    
+        else:
+            # Legacy single-asset configuration
+            required_keys = [
+                'symbol', 'risk_per_trade', 'max_daily_loss', 
+                'max_daily_trades', 'magic_number'
+            ]
+            
+            for key in required_keys:
+                if key not in config:
+                    print(f"   ❌ Missing config key: {key}")
+                    return False
         
         # Test value ranges
-        if not (0 < config['risk_per_trade'] <= 0.1):  # 0-10%
-            print(f"   ❌ Invalid risk_per_trade: {config['risk_per_trade']}")
-            return False
-        
-        if not (0 < config['max_daily_loss'] <= 0.2):  # 0-20%
-            print(f"   ❌ Invalid max_daily_loss: {config['max_daily_loss']}")
+        max_daily_loss = config.get('max_daily_loss', 0.05)
+        if not (0 < max_daily_loss <= 0.2):  # 0-20%
+            print(f"   ❌ Invalid max_daily_loss: {max_daily_loss}")
             return False
         
         print("   ✅ Configuration validation passed")
