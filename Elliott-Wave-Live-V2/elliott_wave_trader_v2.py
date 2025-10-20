@@ -119,32 +119,32 @@ class ElliottWaveTradingEngine:
                         symbols.append(line.upper())
             
             if symbols:
-                self.logger.info(f"📋 Loaded {len(symbols)} symbols from {symbols_file}")
+                self.logger.info(f"Loaded {len(symbols)} symbols from {symbols_file}")
                 return symbols
             else:
-                self.logger.warning(f"⚠️ No symbols found in {symbols_file}")
+                self.logger.warning(f"No symbols found in {symbols_file}")
                 return []
                 
         except FileNotFoundError:
-            self.logger.warning(f"⚠️ Symbols file {symbols_file} not found, using config defaults")
+            self.logger.warning(f"Symbols file {symbols_file} not found, using config defaults")
             return []
         except Exception as e:
-            self.logger.error(f"❌ Error loading symbols from {symbols_file}: {e}")
+            self.logger.error(f"Error loading symbols from {symbols_file}: {e}")
             return []
     
     def initialize(self) -> bool:
         """Initialize all trading components"""
         try:
-            self.logger.info("🚀 Initializing Elliott Wave Trading Engine V2...")
+            self.logger.info("Initializing Elliott Wave Trading Engine V2...")
             
             # Connect market data
             if not self.market_data.connect():
-                self.logger.error("❌ Failed to connect market data")
+                self.logger.error("Failed to connect market data")
                 return False
             
             # Connect trade executor
             if not self.trade_executor.connect():
-                self.logger.error("❌ Failed to connect trade executor")
+                self.logger.error("Failed to connect trade executor")
                 return False
             
             # Validate symbols
@@ -153,12 +153,12 @@ class ElliottWaveTradingEngine:
                 symbol_info = self.market_data.get_symbol_info(symbol)
                 if symbol_info:
                     valid_symbols.append(symbol)
-                    self.logger.info(f"✅ {symbol} validated")
+                    self.logger.info(f"{symbol} validated")
                 else:
-                    self.logger.warning(f"⚠️ {symbol} not available")
+                    self.logger.warning(f"{symbol} not available")
             
             if not valid_symbols:
-                self.logger.error("❌ No valid symbols available")
+                self.logger.error("No valid symbols available")
                 return False
             
             self.config['symbols'] = valid_symbols
@@ -167,14 +167,14 @@ class ElliottWaveTradingEngine:
             for symbol in valid_symbols:
                 self.last_analysis_time[symbol] = datetime.min
             
-            self.logger.info(f"✅ Elliott Wave Trading Engine V2 initialized successfully")
-            self.logger.info(f"📊 Symbols: {', '.join(valid_symbols)}")
-            self.logger.info(f"⏱️ Scan interval: {self.config['scan_interval']}s")
+            self.logger.info(f"Elliott Wave Trading Engine V2 initialized successfully")
+            self.logger.info(f"Symbols: {', '.join(valid_symbols)}")
+            self.logger.info(f"Scan interval: {self.config['scan_interval']}s")
             
             return True
             
         except Exception as e:
-            self.logger.error(f"❌ Initialization failed: {e}")
+            self.logger.error(f"Initialization failed: {e}")
             return False
     
     def start_trading(self):
@@ -193,7 +193,7 @@ class ElliottWaveTradingEngine:
             self.monitoring_thread.daemon = True
             self.monitoring_thread.start()
             
-            self.logger.info("🟢 Elliott Wave Trading Engine V2 started")
+            self.logger.info("Elliott Wave Trading Engine V2 started")
     
     def stop_trading(self):
         """Stop automated trading"""
@@ -208,7 +208,7 @@ class ElliottWaveTradingEngine:
             if self.monitoring_thread and self.monitoring_thread.is_alive():
                 self.monitoring_thread.join(timeout=10)
             
-            self.logger.info("🔴 Elliott Wave Trading Engine V2 stopped")
+            self.logger.info("Elliott Wave Trading Engine V2 stopped")
     
     def _analysis_loop(self):
         """Main analysis loop - runs in separate thread"""
@@ -457,12 +457,12 @@ def main():
     print(f"📋 Using symbols file: {symbols_file}")
     print(f"{'='*50}")
     
-    # Setup logging
+    # Setup logging with UTF-8 encoding
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler(f'elliott_wave_v2_{datetime.now().strftime("%Y%m%d")}.log'),
+            logging.FileHandler(f'elliott_wave_v2_{datetime.now().strftime("%Y%m%d")}.log', encoding='utf-8'),
             logging.StreamHandler()
         ]
     )

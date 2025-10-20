@@ -252,11 +252,70 @@ class ElliottWaveEngine:
             return B + (B - A) * (ext - 1.0)
         else:
             return B - (A - B) * (ext - 1.0)
+    
+    def analyze_waves(self, df) -> dict:
+        """
+        Main analysis method that combines all Elliott Wave detection
+        Returns comprehensive wave analysis for signal generation
+        """
+        try:
+            if len(df) < 50:
+                return {}
+            
+            close_values = df['close'].values
+            atr_values = df['atr'].values if 'atr' in df.columns else np.full(len(df), 0.001)
+            
+            # Detect ZigZag pivots
+            pivots = self.detect_zigzag(close_values, atr_values)
+            
+            if len(pivots) < 5:
+                return {'pivots': pivots, 'impulses': [], 'abc_corrections': []}
+            
+            # Detect impulse waves
+            impulses = self.detect_impulses(pivots, close_values, atr_values)
+            
+            # Detect ABC corrections
+            abc_corrections = self.detect_abc_corrections(pivots)
+            
+            # Determine current trend direction
+            trend_direction = self._determine_trend_direction(df)
+            
+            return {
+                'pivots': pivots,
+                'impulses': impulses,
+                'abc_corrections': abc_corrections,
+                'trend_direction': trend_direction,
+                'last_pivot': pivots[-1] if pivots else None
+            }
+            
+        except Exception as e:
+            return {'error': str(e), 'pivots': [], 'impulses': [], 'abc_corrections': []}
+    
+    def _determine_trend_direction(self, df):
+        """Determine overall trend direction"""
+        try:
+            if 'ema_fast' in df.columns and 'ema_slow' in df.columns:
+                ema_fast = df['ema_fast'].iloc[-1]
+                ema_slow = df['ema_slow'].iloc[-1]
+                
+                if ema_fast > ema_slow:
+                    return Direction.UP
+                else:
+                    return Direction.DOWN
+            else:
+                # Fallback: simple price comparison
+                current_price = df['close'].iloc[-1]
+                old_price = df['close'].iloc[-20] if len(df) >= 20 else df['close'].iloc[0]
+                
+                return Direction.UP if current_price > old_price else Direction.DOWN
+                
+        except Exception:
+            return Direction.UP  # Default
 
 if __name__ == "__main__":
     # Test the engine with sample data
-    print("🌊 Elliott Wave Engine V2 - Core Pattern Recognition")
-    print("✅ ZigZag Detection")
-    print("✅ 5-Wave Impulse Recognition") 
-    print("✅ ABC Correction Detection")
-    print("✅ Fibonacci Zones & Extensions")
+    print("Elliott Wave Engine V2 - Core Pattern Recognition")
+    print("ZigZag Detection")
+    print("5-Wave Impulse Recognition") 
+    print("ABC Correction Detection")
+    print("Fibonacci Zones & Extensions")
