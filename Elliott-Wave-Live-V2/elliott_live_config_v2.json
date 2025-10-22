@@ -17,12 +17,12 @@
   ],
   
   "scan_interval": 60,
-  "account_balance": 10000,
+  "account_balance": 1000,
   
   "risk_parameters": {
-    "max_risk_per_trade": 0.01,
-    "max_daily_risk": 0.03,
-    "max_portfolio_risk": 0.05,
+    "max_risk_per_trade": 0.02,
+    "max_daily_risk": 0.05,
+    "max_portfolio_risk": 0.08,
     "max_correlation_risk": 0.02,
     "max_consecutive_losses": 3,
     "min_reward_risk_ratio": 2.0

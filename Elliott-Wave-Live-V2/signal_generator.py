@@ -296,8 +296,9 @@ class SignalGenerator:
                 take_profit = recent_impulse.wave_4_end.price  # Target Wave 4 level
             
             # Calculate metrics
-            # Validate stop loss meets broker requirements
+            # Validate stop loss and take profit meet broker requirements
             stop_loss = self._validate_stop_loss(entry_price, stop_loss, symbol)
+            take_profit = self._validate_take_profit(entry_price, take_profit, symbol)
             
             stop_pips = self._calculate_pips(entry_price, stop_loss, symbol)
             tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
@@ -357,8 +358,9 @@ class SignalGenerator:
                         stop_loss = wave2_price * 0.995  # Below Wave 2
                         take_profit = wave3_price * 1.618  # Wave 5 target (1.618 extension)
                         
-                        # Validate stop loss meets broker requirements
+                        # Validate stop loss and take profit meet broker requirements
                         stop_loss = self._validate_stop_loss(entry_price, stop_loss, symbol)
+                        take_profit = self._validate_take_profit(entry_price, take_profit, symbol)
                         
                         stop_pips = self._calculate_pips(entry_price, stop_loss, symbol)
                         tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
@@ -399,8 +401,9 @@ class SignalGenerator:
                         stop_loss = wave2_price * 1.005
                         take_profit = wave3_price * 0.382  # Wave 5 target
                         
-                        # Validate stop loss meets broker requirements
+                        # Validate stop loss and take profit meet broker requirements
                         stop_loss = self._validate_stop_loss(entry_price, stop_loss, symbol)
+                        take_profit = self._validate_take_profit(entry_price, take_profit, symbol)
                         
                         stop_pips = self._calculate_pips(entry_price, stop_loss, symbol)
                         tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
@@ -464,8 +467,9 @@ class SignalGenerator:
                         stop_loss = c_price * 1.005
                         take_profit = a_price * 0.9  # Below A wave
                     
-                    # Validate stop loss meets broker requirements
+                    # Validate stop loss and take profit meet broker requirements
                     stop_loss = self._validate_stop_loss(entry_price, stop_loss, symbol)
+                    take_profit = self._validate_take_profit(entry_price, take_profit, symbol)
                     
                     stop_pips = self._calculate_pips(entry_price, stop_loss, symbol)
                     tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
@@ -524,32 +528,75 @@ class SignalGenerator:
     def _validate_stop_loss(self, entry_price: float, stop_loss: float, symbol: str) -> float:
         """Validate and adjust stop loss to meet broker requirements"""
         
-        # Calculate minimum stop distance (typical broker requirements)
+        # Calculate minimum stop distance (maximum conservative for strict brokers)
         min_stop_pips = {
-            'EURUSD': 15, 'GBPUSD': 20, 'AUDUSD': 20, 'NZDUSD': 20,
-            'USDCHF': 15, 'USDCAD': 20, 'USDJPY': 15,
-            'XAUUSD': 50, 'XAGUSD': 30,  # Metals need larger stops
-            'US30': 100, 'NAS100': 50, 'UK100': 50, 'DE40': 50,  # Indices
-            'default': 20
+            'EURUSD': 60, 'GBPUSD': 120, 'AUDUSD': 100, 'NZDUSD': 60,
+            'USDCHF': 60, 'USDCAD': 80, 'USDJPY': 50,
+            'XAUUSD': 200, 'XAGUSD': 120,  # Metals need larger stops
+            'US30': 300, 'NAS100': 200, 'UK100': 200, 'DE40': 150,  # Indices
+            'default': 80
         }
         
         # Get minimum stop for this symbol
         min_pips = min_stop_pips.get(symbol, min_stop_pips['default'])
         
+        # Add spread buffer (some brokers require stop > spread + minimum)
+        spread_buffer = 10  # Extra 10 pips buffer for strict brokers
+        total_min_pips = min_pips + spread_buffer
+        
         # Calculate current stop distance in pips
         current_stop_pips = abs(self._calculate_pips(entry_price, stop_loss, symbol))
         
         # If stop is too small, adjust it
-        if current_stop_pips < min_pips:
+        if current_stop_pips < total_min_pips:
             # Adjust stop loss to minimum distance
             if stop_loss > entry_price:  # Stop above entry (short position)
-                stop_loss = entry_price + (min_pips / self._get_pip_factor(symbol))
+                stop_loss = entry_price + (total_min_pips / self._get_pip_factor(symbol))
             else:  # Stop below entry (long position)  
-                stop_loss = entry_price - (min_pips / self._get_pip_factor(symbol))
+                stop_loss = entry_price - (total_min_pips / self._get_pip_factor(symbol))
                 
-            self.logger.debug(f"{symbol}: Adjusted stop loss from {current_stop_pips:.1f} to {min_pips} pips")
+            self.logger.info(f"{symbol}: Adjusted stop loss from {current_stop_pips:.1f} to {total_min_pips} pips (min: {min_pips} + buffer: {spread_buffer})")
         
         return stop_loss
+    
+    def _validate_take_profit(self, entry_price: float, take_profit: float, symbol: str) -> float:
+        """Validate and adjust take profit to meet broker requirements"""
+        
+        # Same minimum distance requirements as stop loss (extra conservative for strict brokers)
+        min_tp_pips = {
+            'EURUSD': 60, 'GBPUSD': 120, 'AUDUSD': 100, 'NZDUSD': 60,
+            'USDCHF': 60, 'USDCAD': 80, 'USDJPY': 50,
+            'XAUUSD': 200, 'XAGUSD': 120,  # Metals need larger distances
+            'US30': 300, 'NAS100': 200, 'UK100': 200, 'DE40': 150,  # Indices
+            'default': 80
+        }
+        
+        # Get minimum TP distance for this symbol
+        min_pips = min_tp_pips.get(symbol, min_tp_pips['default'])
+        
+        # Add spread buffer
+        spread_buffer = 10  # Extra 10 pips buffer for strict brokers
+        total_min_pips = min_pips + spread_buffer
+        
+        # Calculate current TP distance in pips
+        current_tp_pips = abs(self._calculate_pips(entry_price, take_profit, symbol))
+        
+        # Debug logging
+        self.logger.info(f"{symbol}: TP Check - Current: {current_tp_pips:.1f} pips, Required: {total_min_pips} pips")
+        
+        # If TP is too small, adjust it
+        if current_tp_pips < total_min_pips:
+            # Adjust take profit to minimum distance
+            if take_profit > entry_price:  # TP above entry (long position)
+                take_profit = entry_price + (total_min_pips / self._get_pip_factor(symbol))
+            else:  # TP below entry (short position)  
+                take_profit = entry_price - (total_min_pips / self._get_pip_factor(symbol))
+                
+            self.logger.info(f"{symbol}: Adjusted take profit from {current_tp_pips:.1f} to {total_min_pips} pips (min: {min_pips} + buffer: {spread_buffer})")
+        else:
+            self.logger.info(f"{symbol}: Take profit OK at {current_tp_pips:.1f} pips")
+        
+        return take_profit
     
     def _get_pip_factor(self, symbol: str) -> float:
         """Get pip factor for symbol"""
