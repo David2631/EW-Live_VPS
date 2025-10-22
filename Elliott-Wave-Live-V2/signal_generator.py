@@ -583,8 +583,28 @@ class SignalGenerator:
         # Calculate current TP distance in pips
         current_tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
         
+        # Maximum reasonable take profit distances (broker-friendly)
+        max_tp_pips = {
+            'EURUSD': 300, 'GBPUSD': 350, 'AUDUSD': 300, 'NZDUSD': 250,
+            'USDCHF': 300, 'USDCAD': 350, 'USDJPY': 300,
+            'XAUUSD': 1000, 'XAGUSD': 500,  # Metals can have larger moves
+            'US30': 1500, 'NAS100': 800, 'UK100': 600, 'DE40': 500,  # Indices
+            'default': 400
+        }
+        
+        max_pips = max_tp_pips.get(symbol, max_tp_pips['default'])
+        
         # Debug logging
-        self.logger.info(f"{symbol}: TP Check - Current: {current_tp_pips:.1f} pips, Required: {total_min_pips} pips")
+        self.logger.info(f"{symbol}: TP Check - Current: {current_tp_pips:.1f} pips, Required: {total_min_pips} pips, Max: {max_pips} pips")
+        
+        # Cap take profit at maximum reasonable distance
+        if current_tp_pips > max_pips:
+            if take_profit > entry_price:  # TP above entry (long position)
+                take_profit = entry_price + (max_pips / self._get_pip_factor(symbol))
+            else:  # TP below entry (short position)  
+                take_profit = entry_price - (max_pips / self._get_pip_factor(symbol))
+            self.logger.info(f"{symbol}: Capped take profit from {current_tp_pips:.1f} to {max_pips} pips (max allowed)")
+            current_tp_pips = max_pips
         
         # If TP is too small, adjust it
         if current_tp_pips < total_min_pips:
