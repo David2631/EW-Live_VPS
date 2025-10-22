@@ -311,6 +311,15 @@ class ElliottWaveTradingEngine:
                 # Monitor positions
                 position_status = self.trade_executor.monitor_positions()
                 
+                # CRITICAL: Update active positions in signal generator
+                active_symbols = set()
+                if position_status and 'positions' in position_status:
+                    for position in position_status['positions']:
+                        active_symbols.add(position.get('symbol', ''))
+                
+                # Update signal generator with current active positions
+                self.signal_generator.update_active_positions(active_symbols)
+                
                 # Update session stats
                 self._update_session_stats(position_status)
                 

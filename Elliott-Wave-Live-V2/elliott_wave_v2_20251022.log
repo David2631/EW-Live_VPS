@@ -59,3 +59,298 @@
 2025-10-22 16:37:56,041 - signal_generator - INFO - DEBUG EURAUD: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
 2025-10-22 16:38:03,343 - __main__ - INFO - ⚠️ Shutdown requested by user
 2025-10-22 16:38:03,343 - __main__ - INFO - 🔄 Initiating graceful shutdown...
+2025-10-22 16:48:26,718 - __main__ - INFO - Loaded 17 symbols from symbols.txt
+2025-10-22 16:48:26,719 - __main__ - INFO - Symbols loaded from symbols.txt: 17 symbols
+2025-10-22 16:48:26,720 - __main__ - INFO - Configuration loaded: 17 symbols, 60s interval
+2025-10-22 16:48:26,720 - __main__ - INFO - Initializing Elliott Wave Trading Engine V2...
+2025-10-22 16:48:26,739 - market_data_manager - INFO - Connected to MT5: MetaTrader 5 Build 5370
+2025-10-22 16:48:26,739 - market_data_manager - INFO - Account: 5041503698 (MetaQuotes Ltd.)
+2025-10-22 16:48:26,755 - trade_executor - INFO - Trade Executor connected to account 5041503698
+2025-10-22 16:48:26,756 - trade_executor - INFO - Loaded 3 existing Elliott Wave positions
+2025-10-22 16:48:26,756 - __main__ - INFO - EURUSD validated
+2025-10-22 16:48:26,757 - __main__ - INFO - GBPUSD validated
+2025-10-22 16:48:26,758 - __main__ - INFO - AUDUSD validated
+2025-10-22 16:48:26,758 - __main__ - INFO - NZDUSD validated
+2025-10-22 16:48:26,759 - __main__ - INFO - USDCHF validated
+2025-10-22 16:48:26,759 - __main__ - INFO - USDCAD validated
+2025-10-22 16:48:26,759 - __main__ - INFO - XAUUSD validated
+2025-10-22 16:48:26,760 - __main__ - INFO - XAGUSD validated
+2025-10-22 16:48:26,760 - __main__ - INFO - US30 validated
+2025-10-22 16:48:26,761 - market_data_manager - WARNING - Symbol NAS100 not found
+2025-10-22 16:48:26,761 - __main__ - WARNING - NAS100 not available
+2025-10-22 16:48:26,761 - market_data_manager - WARNING - Symbol US500.F not found
+2025-10-22 16:48:26,762 - __main__ - WARNING - US500.F not available
+2025-10-22 16:48:26,762 - __main__ - INFO - DE40 validated
+2025-10-22 16:48:26,763 - __main__ - INFO - UK100 validated
+2025-10-22 16:48:26,763 - market_data_manager - WARNING - Symbol FR40 not found
+2025-10-22 16:48:26,763 - __main__ - WARNING - FR40 not available
+2025-10-22 16:48:26,764 - __main__ - INFO - AUDNOK validated
+2025-10-22 16:48:26,765 - __main__ - INFO - EURNOK validated
+2025-10-22 16:48:26,765 - __main__ - INFO - EURAUD validated
+2025-10-22 16:48:26,766 - __main__ - INFO - Elliott Wave Trading Engine V2 initialized successfully
+2025-10-22 16:48:26,766 - __main__ - INFO - Symbols: EURUSD, GBPUSD, AUDUSD, NZDUSD, USDCHF, USDCAD, XAUUSD, XAGUSD, US30, DE40, UK100, AUDNOK, EURNOK, EURAUD
+2025-10-22 16:48:26,767 - __main__ - INFO - Scan interval: 60s
+2025-10-22 16:48:26,775 - __main__ - INFO - Elliott Wave Trading Engine V2 started
+2025-10-22 16:48:26,801 - signal_generator - INFO - DEBUG GBPUSD: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:48:26,802 - signal_generator - ERROR - Signal generation error for GBPUSD: 'SignalGenerator' object has no attribute 'use_ema_filter'
+2025-10-22 16:48:26,806 - signal_generator - ERROR - Full traceback: Traceback (most recent call last):
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 192, in generate_signal
+    signal = self._evaluate_elliott_patterns(
+        symbol, df, current_price, impulses, abc_corrections, current_trend
+    )
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 249, in _evaluate_elliott_patterns
+    correction_signal = self._check_abc_completion(symbol, df, abc_corrections, current_bid, current_ask)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 475, in _check_abc_completion
+    strength = self._calculate_signal_strength(df, abc.confidence, rr_ratio)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 582, in _calculate_signal_strength
+    if self._check_trend_alignment(df):
+       ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 601, in _check_trend_alignment
+    if not self.use_ema_filter:
+           ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'SignalGenerator' object has no attribute 'use_ema_filter'
+
+2025-10-22 16:48:26,823 - signal_generator - INFO - DEBUG AUDUSD: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-22 16:48:26,823 - signal_generator - INFO - DEBUG AUDUSD: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:48:26,824 - signal_generator - ERROR - Signal generation error for AUDUSD: 'SignalGenerator' object has no attribute 'use_ema_filter'
+2025-10-22 16:48:26,826 - signal_generator - ERROR - Full traceback: Traceback (most recent call last):
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 192, in generate_signal
+    signal = self._evaluate_elliott_patterns(
+        symbol, df, current_price, impulses, abc_corrections, current_trend
+    )
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 239, in _evaluate_elliott_patterns
+    reversal_signal = self._check_wave5_completion(symbol, df, impulses, current_bid, current_ask)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 307, in _check_wave5_completion
+    strength = self._calculate_signal_strength(df, recent_impulse.confidence, rr_ratio)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 582, in _calculate_signal_strength
+    if self._check_trend_alignment(df):
+       ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 601, in _check_trend_alignment
+    if not self.use_ema_filter:
+           ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'SignalGenerator' object has no attribute 'use_ema_filter'
+
+2025-10-22 16:48:26,843 - signal_generator - INFO - DEBUG NZDUSD: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-22 16:48:26,844 - signal_generator - INFO - DEBUG NZDUSD: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:48:26,844 - signal_generator - ERROR - Signal generation error for NZDUSD: 'SignalGenerator' object has no attribute 'use_ema_filter'
+2025-10-22 16:48:26,846 - signal_generator - ERROR - Full traceback: Traceback (most recent call last):
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 192, in generate_signal
+    signal = self._evaluate_elliott_patterns(
+        symbol, df, current_price, impulses, abc_corrections, current_trend
+    )
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 249, in _evaluate_elliott_patterns
+    correction_signal = self._check_abc_completion(symbol, df, abc_corrections, current_bid, current_ask)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 475, in _check_abc_completion
+    strength = self._calculate_signal_strength(df, abc.confidence, rr_ratio)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 582, in _calculate_signal_strength
+    if self._check_trend_alignment(df):
+       ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 601, in _check_trend_alignment
+    if not self.use_ema_filter:
+           ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'SignalGenerator' object has no attribute 'use_ema_filter'
+
+2025-10-22 16:48:26,858 - signal_generator - INFO - DEBUG USDCHF: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:48:26,881 - signal_generator - INFO - DEBUG XAUUSD: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-22 16:48:26,882 - signal_generator - INFO - DEBUG XAUUSD: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:48:26,905 - signal_generator - INFO - DEBUG US30: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-22 16:48:26,906 - signal_generator - INFO - DEBUG US30: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:48:26,906 - signal_generator - ERROR - Signal generation error for US30: 'SignalGenerator' object has no attribute 'use_ema_filter'
+2025-10-22 16:48:26,908 - signal_generator - ERROR - Full traceback: Traceback (most recent call last):
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 192, in generate_signal
+    signal = self._evaluate_elliott_patterns(
+        symbol, df, current_price, impulses, abc_corrections, current_trend
+    )
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 249, in _evaluate_elliott_patterns
+    correction_signal = self._check_abc_completion(symbol, df, abc_corrections, current_bid, current_ask)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 475, in _check_abc_completion
+    strength = self._calculate_signal_strength(df, abc.confidence, rr_ratio)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 582, in _calculate_signal_strength
+    if self._check_trend_alignment(df):
+       ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 601, in _check_trend_alignment
+    if not self.use_ema_filter:
+           ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'SignalGenerator' object has no attribute 'use_ema_filter'
+
+2025-10-22 16:48:26,949 - signal_generator - INFO - DEBUG EURAUD: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-22 16:48:26,949 - signal_generator - INFO - DEBUG EURAUD: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:49:26,973 - signal_generator - INFO - DEBUG GBPUSD: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:49:26,973 - signal_generator - ERROR - Signal generation error for GBPUSD: 'SignalGenerator' object has no attribute 'use_ema_filter'
+2025-10-22 16:49:26,976 - signal_generator - ERROR - Full traceback: Traceback (most recent call last):
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 192, in generate_signal
+    signal = self._evaluate_elliott_patterns(
+        symbol, df, current_price, impulses, abc_corrections, current_trend
+    )
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 249, in _evaluate_elliott_patterns
+    correction_signal = self._check_abc_completion(symbol, df, abc_corrections, current_bid, current_ask)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 475, in _check_abc_completion
+    strength = self._calculate_signal_strength(df, abc.confidence, rr_ratio)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 582, in _calculate_signal_strength
+    if self._check_trend_alignment(df):
+       ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 601, in _check_trend_alignment
+    if not self.use_ema_filter:
+           ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'SignalGenerator' object has no attribute 'use_ema_filter'
+
+2025-10-22 16:49:26,985 - signal_generator - INFO - DEBUG AUDUSD: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-22 16:49:26,986 - signal_generator - INFO - DEBUG AUDUSD: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:49:26,986 - signal_generator - ERROR - Signal generation error for AUDUSD: 'SignalGenerator' object has no attribute 'use_ema_filter'
+2025-10-22 16:49:26,987 - signal_generator - ERROR - Full traceback: Traceback (most recent call last):
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 192, in generate_signal
+    signal = self._evaluate_elliott_patterns(
+        symbol, df, current_price, impulses, abc_corrections, current_trend
+    )
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 239, in _evaluate_elliott_patterns
+    reversal_signal = self._check_wave5_completion(symbol, df, impulses, current_bid, current_ask)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 307, in _check_wave5_completion
+    strength = self._calculate_signal_strength(df, recent_impulse.confidence, rr_ratio)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 582, in _calculate_signal_strength
+    if self._check_trend_alignment(df):
+       ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 601, in _check_trend_alignment
+    if not self.use_ema_filter:
+           ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'SignalGenerator' object has no attribute 'use_ema_filter'
+
+2025-10-22 16:49:26,998 - signal_generator - INFO - DEBUG NZDUSD: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-22 16:49:26,998 - signal_generator - INFO - DEBUG NZDUSD: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:49:26,999 - signal_generator - ERROR - Signal generation error for NZDUSD: 'SignalGenerator' object has no attribute 'use_ema_filter'
+2025-10-22 16:49:27,000 - signal_generator - ERROR - Full traceback: Traceback (most recent call last):
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 192, in generate_signal
+    signal = self._evaluate_elliott_patterns(
+        symbol, df, current_price, impulses, abc_corrections, current_trend
+    )
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 249, in _evaluate_elliott_patterns
+    correction_signal = self._check_abc_completion(symbol, df, abc_corrections, current_bid, current_ask)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 475, in _check_abc_completion
+    strength = self._calculate_signal_strength(df, abc.confidence, rr_ratio)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 582, in _calculate_signal_strength
+    if self._check_trend_alignment(df):
+       ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 601, in _check_trend_alignment
+    if not self.use_ema_filter:
+           ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'SignalGenerator' object has no attribute 'use_ema_filter'
+
+2025-10-22 16:49:27,013 - signal_generator - INFO - DEBUG USDCHF: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:49:27,039 - signal_generator - INFO - DEBUG XAUUSD: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-22 16:49:27,039 - signal_generator - INFO - DEBUG XAUUSD: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:49:27,061 - signal_generator - INFO - DEBUG US30: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-22 16:49:27,061 - signal_generator - INFO - DEBUG US30: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:49:27,062 - signal_generator - ERROR - Signal generation error for US30: 'SignalGenerator' object has no attribute 'use_ema_filter'
+2025-10-22 16:49:27,063 - signal_generator - ERROR - Full traceback: Traceback (most recent call last):
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 192, in generate_signal
+    signal = self._evaluate_elliott_patterns(
+        symbol, df, current_price, impulses, abc_corrections, current_trend
+    )
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 249, in _evaluate_elliott_patterns
+    correction_signal = self._check_abc_completion(symbol, df, abc_corrections, current_bid, current_ask)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 475, in _check_abc_completion
+    strength = self._calculate_signal_strength(df, abc.confidence, rr_ratio)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 582, in _calculate_signal_strength
+    if self._check_trend_alignment(df):
+       ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 601, in _check_trend_alignment
+    if not self.use_ema_filter:
+           ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'SignalGenerator' object has no attribute 'use_ema_filter'
+
+2025-10-22 16:49:27,112 - signal_generator - INFO - DEBUG EURAUD: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-22 16:49:27,112 - signal_generator - INFO - DEBUG EURAUD: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:50:26,778 - __main__ - INFO - 📊 Status Update:
+2025-10-22 16:50:26,778 - __main__ - INFO -    Positions: 3 (Long: 1, Short: 2)
+2025-10-22 16:50:26,779 - __main__ - INFO -    P&L: $24.93
+2025-10-22 16:50:26,779 - __main__ - INFO -    Portfolio Risk: 0.0%
+2025-10-22 16:50:26,779 - __main__ - INFO -    Signals: 0 | Trades: 0
+2025-10-22 16:50:27,144 - signal_generator - INFO - DEBUG GBPUSD: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:50:27,145 - signal_generator - ERROR - Signal generation error for GBPUSD: 'SignalGenerator' object has no attribute 'use_ema_filter'
+2025-10-22 16:50:27,146 - signal_generator - ERROR - Full traceback: Traceback (most recent call last):
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 192, in generate_signal
+    signal = self._evaluate_elliott_patterns(
+        symbol, df, current_price, impulses, abc_corrections, current_trend
+    )
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 249, in _evaluate_elliott_patterns
+    correction_signal = self._check_abc_completion(symbol, df, abc_corrections, current_bid, current_ask)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 475, in _check_abc_completion
+    strength = self._calculate_signal_strength(df, abc.confidence, rr_ratio)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 582, in _calculate_signal_strength
+    if self._check_trend_alignment(df):
+       ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 601, in _check_trend_alignment
+    if not self.use_ema_filter:
+           ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'SignalGenerator' object has no attribute 'use_ema_filter'
+
+2025-10-22 16:50:27,158 - signal_generator - INFO - DEBUG AUDUSD: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-22 16:50:27,158 - signal_generator - INFO - DEBUG AUDUSD: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:50:27,159 - signal_generator - ERROR - Signal generation error for AUDUSD: 'SignalGenerator' object has no attribute 'use_ema_filter'
+2025-10-22 16:50:27,161 - signal_generator - ERROR - Full traceback: Traceback (most recent call last):
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 192, in generate_signal
+    signal = self._evaluate_elliott_patterns(
+        symbol, df, current_price, impulses, abc_corrections, current_trend
+    )
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 249, in _evaluate_elliott_patterns
+    correction_signal = self._check_abc_completion(symbol, df, abc_corrections, current_bid, current_ask)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 475, in _check_abc_completion
+    strength = self._calculate_signal_strength(df, abc.confidence, rr_ratio)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 582, in _calculate_signal_strength
+    if self._check_trend_alignment(df):
+       ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 601, in _check_trend_alignment
+    if not self.use_ema_filter:
+           ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'SignalGenerator' object has no attribute 'use_ema_filter'
+
+2025-10-22 16:50:27,172 - signal_generator - INFO - DEBUG NZDUSD: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-22 16:50:27,172 - signal_generator - INFO - DEBUG NZDUSD: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:50:27,172 - signal_generator - ERROR - Signal generation error for NZDUSD: 'SignalGenerator' object has no attribute 'use_ema_filter'
+2025-10-22 16:50:27,174 - signal_generator - ERROR - Full traceback: Traceback (most recent call last):
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 192, in generate_signal
+    signal = self._evaluate_elliott_patterns(
+        symbol, df, current_price, impulses, abc_corrections, current_trend
+    )
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 249, in _evaluate_elliott_patterns
+    correction_signal = self._check_abc_completion(symbol, df, abc_corrections, current_bid, current_ask)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 475, in _check_abc_completion
+    strength = self._calculate_signal_strength(df, abc.confidence, rr_ratio)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 582, in _calculate_signal_strength
+    if self._check_trend_alignment(df):
+       ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 601, in _check_trend_alignment
+    if not self.use_ema_filter:
+           ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'SignalGenerator' object has no attribute 'use_ema_filter'
+
+2025-10-22 16:50:27,186 - signal_generator - INFO - DEBUG USDCHF: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:50:27,216 - signal_generator - INFO - DEBUG XAUUSD: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-22 16:50:27,216 - signal_generator - INFO - DEBUG XAUUSD: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:50:27,243 - signal_generator - INFO - DEBUG US30: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-22 16:50:27,244 - signal_generator - INFO - DEBUG US30: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:50:27,244 - signal_generator - ERROR - Signal generation error for US30: 'SignalGenerator' object has no attribute 'use_ema_filter'
+2025-10-22 16:50:27,246 - signal_generator - ERROR - Full traceback: Traceback (most recent call last):
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 192, in generate_signal
+    signal = self._evaluate_elliott_patterns(
+        symbol, df, current_price, impulses, abc_corrections, current_trend
+    )
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 249, in _evaluate_elliott_patterns
+    correction_signal = self._check_abc_completion(symbol, df, abc_corrections, current_bid, current_ask)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 475, in _check_abc_completion
+    strength = self._calculate_signal_strength(df, abc.confidence, rr_ratio)
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 582, in _calculate_signal_strength
+    if self._check_trend_alignment(df):
+       ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^
+  File "C:\Users\david\Documents\Elliott-Wellen_v2\Elliott-Wave-Live-V2\signal_generator.py", line 601, in _check_trend_alignment
+    if not self.use_ema_filter:
+           ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'SignalGenerator' object has no attribute 'use_ema_filter'
+
+2025-10-22 16:50:27,298 - signal_generator - INFO - DEBUG EURAUD: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-22 16:50:27,298 - signal_generator - INFO - DEBUG EURAUD: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:50:53,673 - __main__ - INFO - ⚠️ Shutdown requested by user
+2025-10-22 16:50:53,674 - __main__ - INFO - 🔄 Initiating graceful shutdown...
+2025-10-22 16:51:03,684 - __main__ - INFO - Elliott Wave Trading Engine V2 stopped
+2025-10-22 16:51:03,684 - market_data_manager - INFO - MT5 connection closed
+2025-10-22 16:51:03,684 - trade_executor - INFO - Trade Executor disconnected
+2025-10-22 16:51:03,685 - __main__ - INFO - ✅ Elliott Wave Trading Engine V2 shutdown complete

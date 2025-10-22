@@ -27,11 +27,23 @@ class Pivot:
 class Impulse:
     direction: Dir
     pivots: List[Pivot]  # 6 pivots: [p0, p1, p2, p3, p4, p5]
+    confidence: float = 0.0
+    
+    @property
+    def wave_5_end(self) -> Optional[Pivot]:
+        """Return Wave 5 end pivot (should be pivot[5])"""
+        return self.pivots[5] if len(self.pivots) >= 6 else None
 
 @dataclass
 class ABC:
     direction: Dir
     pivots: List[Pivot]  # 4 pivots
+    confidence: float = 0.0
+    
+    @property
+    def c_end(self) -> Optional[Pivot]:
+        """Return C wave end pivot (should be pivot[3])"""
+        return self.pivots[3] if len(self.pivots) >= 4 else None
 
 @dataclass 
 class ElliottWavePattern:
@@ -576,7 +588,14 @@ class ElliottEngine:
                     i += 1
                     continue
                     
-                res.append(Impulse(Dir.UP, [p0, p1, p2, p3, p4, p5]))
+                # Calculate basic confidence based on wave proportions
+                confidence = 70.0  # Base confidence
+                if w3 > w1 * 1.2:  # Strong Wave 3
+                    confidence += 10
+                if p5.price > p3.price * 1.01:  # Wave 5 extends properly
+                    confidence += 10
+                    
+                res.append(Impulse(Dir.UP, [p0, p1, p2, p3, p4, p5], confidence))
                 i += 3
                 
             elif kinds == 'HLHLHL':  # Bearish impulse
@@ -598,7 +617,14 @@ class ElliottEngine:
                     i += 1
                     continue
                     
-                res.append(Impulse(Dir.DOWN, [p0, p1, p2, p3, p4, p5]))
+                # Calculate basic confidence based on wave proportions  
+                confidence = 70.0  # Base confidence
+                if w3 > w1 * 1.2:  # Strong Wave 3
+                    confidence += 10
+                if p5.price < p3.price * 0.99:  # Wave 5 extends properly down
+                    confidence += 10
+                    
+                res.append(Impulse(Dir.DOWN, [p0, p1, p2, p3, p4, p5], confidence))
                 i += 3
             else:
                 i += 1
@@ -623,7 +649,13 @@ class ElliottEngine:
                     i += 1
                     continue
                     
-                out.append(ABC(Dir.DOWN, [h0, l1, h1, l2]))
+                # Calculate ABC confidence
+                confidence = 65.0  # Base confidence for ABC
+                ratio = B/A
+                if 0.5 <= ratio <= 0.7:  # Ideal retracement
+                    confidence += 15
+                    
+                out.append(ABC(Dir.DOWN, [h0, l1, h1, l2], confidence))
                 i += 2
                 
             elif kinds == 'LHLH':  # Bullish ABC
@@ -635,7 +667,13 @@ class ElliottEngine:
                     i += 1
                     continue
                     
-                out.append(ABC(Dir.UP, [l0, h1, l1, h2]))
+                # Calculate ABC confidence
+                confidence = 65.0  # Base confidence for ABC
+                ratio = B/A  
+                if 0.5 <= ratio <= 0.7:  # Ideal retracement
+                    confidence += 15
+                    
+                out.append(ABC(Dir.UP, [l0, h1, l1, h2], confidence))
                 i += 2
             else:
                 i += 1

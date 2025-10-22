@@ -118,6 +118,11 @@ class SignalGenerator:
         self.min_confidence = 70.0  # Minimum confidence for signal generation
         self.max_spread_pips = 3.0  # Maximum spread for signal validity
         
+        # Position tracking - CRITICAL: Prevent duplicate positions
+        self.active_positions = set()  # Track symbols with open positions
+        self.recent_signals = {}  # Track recent signals to prevent duplicates
+        self.signal_cooldown = 300  # 5 minutes cooldown between same signals
+        
         # ML Filter configuration
         self.use_ml_filter = self.config.get('use_ml_filter', True)
         self.ml_threshold = self.config.get('ml_threshold', 0.3)  # ORIGINAL: 30% threshold (Top 30%)
@@ -127,6 +132,26 @@ class SignalGenerator:
         
         # Fibonacci retracement levels for entries
         self.fib_levels = [0.236, 0.382, 0.5, 0.618, 0.786]
+    
+    def update_active_positions(self, active_symbols: set):
+        """Update list of symbols with active positions"""
+        self.active_positions = active_symbols
+    
+    def _check_signal_cooldown(self, symbol: str, signal_type: str) -> bool:
+        """Check if signal is in cooldown period"""
+        from datetime import datetime, timedelta
+        
+        signal_key = f"{symbol}_{signal_type}"
+        now = datetime.now()
+        
+        if signal_key in self.recent_signals:
+            last_signal = self.recent_signals[signal_key]
+            if (now - last_signal).total_seconds() < self.signal_cooldown:
+                return True  # Still in cooldown
+        
+        # Update last signal time
+        self.recent_signals[signal_key] = now
+        return False  # Not in cooldown
         
     def generate_signal(self, symbol: str, df: pd.DataFrame, current_price: Dict) -> Optional[TradingSignal]:
         """
@@ -140,6 +165,11 @@ class SignalGenerator:
         try:
             if len(df) < 100:
                 self.logger.warning(f"{symbol}: Insufficient data for signal generation")
+                return None
+            
+            # CRITICAL: Check if position already exists for this symbol
+            if symbol in self.active_positions:
+                self.logger.debug(f"{symbol}: Position already active - skipping signal generation")
                 return None
             
             # Check spread conditions
@@ -164,6 +194,11 @@ class SignalGenerator:
             )
             
             if signal and signal.confidence >= self.min_confidence:
+                # Check signal cooldown to prevent duplicates
+                if self._check_signal_cooldown(symbol, signal.signal_type.value):
+                    self.logger.debug(f"{symbol}: Signal {signal.signal_type.value} in cooldown period")
+                    return None
+                
                 # Apply ML filtering if enabled
                 signal = self._apply_ml_filter(signal, df)
                 
@@ -261,6 +296,9 @@ class SignalGenerator:
                 take_profit = recent_impulse.wave_4_end.price  # Target Wave 4 level
             
             # Calculate metrics
+            # Validate stop loss meets broker requirements
+            stop_loss = self._validate_stop_loss(entry_price, stop_loss, symbol)
+            
             stop_pips = self._calculate_pips(entry_price, stop_loss, symbol)
             tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
             rr_ratio = abs(tp_pips) / abs(stop_pips) if stop_pips != 0 else 0
@@ -319,6 +357,9 @@ class SignalGenerator:
                         stop_loss = wave2_price * 0.995  # Below Wave 2
                         take_profit = wave3_price * 1.618  # Wave 5 target (1.618 extension)
                         
+                        # Validate stop loss meets broker requirements
+                        stop_loss = self._validate_stop_loss(entry_price, stop_loss, symbol)
+                        
                         stop_pips = self._calculate_pips(entry_price, stop_loss, symbol)
                         tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
                         rr_ratio = abs(tp_pips) / abs(stop_pips) if stop_pips != 0 else 0
@@ -357,6 +398,9 @@ class SignalGenerator:
                         entry_price = current_bid
                         stop_loss = wave2_price * 1.005
                         take_profit = wave3_price * 0.382  # Wave 5 target
+                        
+                        # Validate stop loss meets broker requirements
+                        stop_loss = self._validate_stop_loss(entry_price, stop_loss, symbol)
                         
                         stop_pips = self._calculate_pips(entry_price, stop_loss, symbol)
                         tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
@@ -420,6 +464,9 @@ class SignalGenerator:
                         stop_loss = c_price * 1.005
                         take_profit = a_price * 0.9  # Below A wave
                     
+                    # Validate stop loss meets broker requirements
+                    stop_loss = self._validate_stop_loss(entry_price, stop_loss, symbol)
+                    
                     stop_pips = self._calculate_pips(entry_price, stop_loss, symbol)
                     tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
                     rr_ratio = abs(tp_pips) / abs(stop_pips) if stop_pips != 0 else 0
@@ -473,6 +520,47 @@ class SignalGenerator:
         """Calculate current spread in pips"""
         spread = current_price['spread']
         return self._calculate_pips(current_price['ask'], current_price['bid'], symbol)
+    
+    def _validate_stop_loss(self, entry_price: float, stop_loss: float, symbol: str) -> float:
+        """Validate and adjust stop loss to meet broker requirements"""
+        
+        # Calculate minimum stop distance (typical broker requirements)
+        min_stop_pips = {
+            'EURUSD': 15, 'GBPUSD': 20, 'AUDUSD': 20, 'NZDUSD': 20,
+            'USDCHF': 15, 'USDCAD': 20, 'USDJPY': 15,
+            'XAUUSD': 50, 'XAGUSD': 30,  # Metals need larger stops
+            'US30': 100, 'NAS100': 50, 'UK100': 50, 'DE40': 50,  # Indices
+            'default': 20
+        }
+        
+        # Get minimum stop for this symbol
+        min_pips = min_stop_pips.get(symbol, min_stop_pips['default'])
+        
+        # Calculate current stop distance in pips
+        current_stop_pips = abs(self._calculate_pips(entry_price, stop_loss, symbol))
+        
+        # If stop is too small, adjust it
+        if current_stop_pips < min_pips:
+            # Adjust stop loss to minimum distance
+            if stop_loss > entry_price:  # Stop above entry (short position)
+                stop_loss = entry_price + (min_pips / self._get_pip_factor(symbol))
+            else:  # Stop below entry (long position)  
+                stop_loss = entry_price - (min_pips / self._get_pip_factor(symbol))
+                
+            self.logger.debug(f"{symbol}: Adjusted stop loss from {current_stop_pips:.1f} to {min_pips} pips")
+        
+        return stop_loss
+    
+    def _get_pip_factor(self, symbol: str) -> float:
+        """Get pip factor for symbol"""
+        if 'JPY' in symbol:
+            return 100.0  # JPY pairs: 0.01 = 1 pip
+        elif symbol in ['XAUUSD', 'XAGUSD']:
+            return 10.0   # Metals: 0.1 = 1 pip  
+        elif symbol in ['US30', 'NAS100', 'UK100', 'DE40']:
+            return 1.0    # Indices: 1.0 = 1 pip
+        else:
+            return 10000.0  # Standard pairs: 0.0001 = 1 pip
     
     def _calculate_signal_strength(self, df: pd.DataFrame, wave_confidence: float, rr_ratio: float) -> SignalStrength:
         """Calculate signal strength based on multiple factors"""
