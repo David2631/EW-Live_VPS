@@ -11,7 +11,7 @@ from enum import Enum
 import logging
 from datetime import datetime
 
-from elliott_wave_engine_original import ElliottWaveEngine, Direction, Impulse, ABC
+from elliott_wave_engine_original import ElliottWaveEngine, Dir, Impulse, ABC
 
 class SignalType(Enum):
     """Trading signal types"""
@@ -41,7 +41,7 @@ class TradingSignal:
     
     # Elliott Wave context
     wave_pattern: str
-    wave_direction: Direction
+    wave_direction: Dir
     current_wave: str
     fibonacci_level: Optional[float]
     
@@ -183,7 +183,7 @@ class SignalGenerator:
     
     def _evaluate_elliott_patterns(self, symbol: str, df: pd.DataFrame, current_price: Dict,
                                  impulses: List[Impulse], abc_corrections: List[ABC], 
-                                 trend_direction: Direction) -> Optional[TradingSignal]:
+                                 trend_direction: Dir) -> Optional[TradingSignal]:
         """Evaluate Elliott Wave patterns for trading opportunities"""
         
         current_close = df['close'].iloc[-1]
@@ -236,7 +236,7 @@ class SignalGenerator:
         if abs(current_close - wave5_price) / wave5_price < 0.005:  # Within 0.5%
             
             # Determine reversal direction
-            if recent_impulse.direction == Direction.UP:
+            if recent_impulse.direction == Dir.UP:
                 # Bullish impulse completed - expect bearish reversal
                 signal_type = SignalType.SELL
                 entry_price = current_bid
@@ -300,7 +300,7 @@ class SignalGenerator:
                 current_close = df['close'].iloc[-1]
                 
                 # Check if we're in early Wave 4 retracement
-                if impulse.direction == Direction.UP:
+                if impulse.direction == Dir.UP:
                     retracement = (wave3_price - current_close) / (wave3_price - wave2_price)
                     if 0.2 < retracement < 0.5:  # 20-50% retracement
                         
@@ -339,7 +339,7 @@ class SignalGenerator:
                             )
                 
                 # Similar logic for bearish Wave 3
-                elif impulse.direction == Direction.DOWN:
+                elif impulse.direction == Dir.DOWN:
                     retracement = (current_close - wave3_price) / (wave2_price - wave3_price)
                     if 0.2 < retracement < 0.5:
                         
@@ -398,7 +398,7 @@ class SignalGenerator:
                 if abs(current_close - c_price) / c_price < 0.01:  # Within 1%
                     
                     # Determine trend resumption direction
-                    if abc.direction == Direction.DOWN:  # Corrective down, expect up
+                    if abc.direction == Dir.DOWN:  # Corrective down, expect up
                         signal_type = SignalType.BUY
                         entry_price = current_ask
                         stop_loss = c_price * 0.995
