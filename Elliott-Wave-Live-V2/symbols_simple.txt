@@ -1,0 +1,10 @@
+# Simple Symbol-Liste - Demo-freundlich & weit verfügbar
+# Diese Symbole sind in den meisten MT5 Demo-Accounts verfügbar
+
+EURUSD
+GBPUSD
+USDJPY
+AUDUSD
+USDCAD
+XAUUSD
+XAGUSD

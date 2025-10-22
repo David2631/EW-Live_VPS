@@ -1,0 +1,61 @@
+2025-10-22 16:37:53,477 - __main__ - INFO - Loaded 17 symbols from symbols.txt
+2025-10-22 16:37:53,478 - __main__ - INFO - Symbols loaded from symbols.txt: 17 symbols
+2025-10-22 16:37:53,478 - __main__ - INFO - Configuration loaded: 17 symbols, 60s interval
+2025-10-22 16:37:53,478 - __main__ - INFO - Initializing Elliott Wave Trading Engine V2...
+2025-10-22 16:37:53,509 - market_data_manager - INFO - Connected to MT5: MetaTrader 5 Build 5370
+2025-10-22 16:37:53,510 - market_data_manager - INFO - Account: 5041503698 (MetaQuotes Ltd.)
+2025-10-22 16:37:53,535 - trade_executor - INFO - Trade Executor connected to account 5041503698
+2025-10-22 16:37:53,537 - __main__ - INFO - EURUSD validated
+2025-10-22 16:37:53,539 - __main__ - INFO - GBPUSD validated
+2025-10-22 16:37:53,539 - __main__ - INFO - AUDUSD validated
+2025-10-22 16:37:53,540 - __main__ - INFO - NZDUSD validated
+2025-10-22 16:37:53,541 - __main__ - INFO - USDCHF validated
+2025-10-22 16:37:53,541 - __main__ - INFO - USDCAD validated
+2025-10-22 16:37:53,542 - __main__ - INFO - XAUUSD validated
+2025-10-22 16:37:53,543 - __main__ - INFO - XAGUSD validated
+2025-10-22 16:37:53,545 - __main__ - INFO - US30 validated
+2025-10-22 16:37:53,545 - market_data_manager - WARNING - Symbol NAS100 not found
+2025-10-22 16:37:53,546 - __main__ - WARNING - NAS100 not available
+2025-10-22 16:37:53,546 - market_data_manager - WARNING - Symbol US500.F not found
+2025-10-22 16:37:53,546 - __main__ - WARNING - US500.F not available
+2025-10-22 16:37:53,547 - __main__ - INFO - DE40 validated
+2025-10-22 16:37:53,547 - __main__ - INFO - UK100 validated
+2025-10-22 16:37:53,547 - market_data_manager - WARNING - Symbol FR40 not found
+2025-10-22 16:37:53,548 - __main__ - WARNING - FR40 not available
+2025-10-22 16:37:53,548 - __main__ - INFO - AUDNOK validated
+2025-10-22 16:37:53,548 - __main__ - INFO - EURNOK validated
+2025-10-22 16:37:53,548 - __main__ - INFO - EURAUD validated
+2025-10-22 16:37:53,549 - __main__ - INFO - Elliott Wave Trading Engine V2 initialized successfully
+2025-10-22 16:37:53,549 - __main__ - INFO - Symbols: EURUSD, GBPUSD, AUDUSD, NZDUSD, USDCHF, USDCAD, XAUUSD, XAGUSD, US30, DE40, UK100, AUDNOK, EURNOK, EURAUD
+2025-10-22 16:37:53,549 - __main__ - INFO - Scan interval: 60s
+2025-10-22 16:37:53,578 - __main__ - INFO - Elliott Wave Trading Engine V2 started
+2025-10-22 16:37:53,644 - signal_generator - INFO - DEBUG GBPUSD: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:37:53,646 - signal_generator - INFO - 🎯 GBPUSD Signal: BUY (4) - Confidence: 80.0% ML: 0.920
+2025-10-22 16:37:53,694 - trade_executor - INFO - ✅ Position opened: GBPUSD BUY 0.09 lots at 1.33541
+2025-10-22 16:37:53,695 - risk_manager - INFO - Position added: GBPUSD, Lot: 0.09, Risk: 100.84
+2025-10-22 16:37:53,696 - __main__ - INFO - 🎯 GBPUSD: Trade executed - BUY 0.09 lots at 1.33541
+2025-10-22 16:37:53,721 - signal_generator - INFO - DEBUG AUDUSD: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-22 16:37:53,721 - signal_generator - INFO - DEBUG AUDUSD: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:37:53,722 - signal_generator - INFO - 🎯 AUDUSD Signal: SELL (3) - Confidence: 80.0% ML: 0.720
+2025-10-22 16:37:53,750 - trade_executor - INFO - ✅ Position opened: AUDUSD SELL 0.22 lots at 0.64949
+2025-10-22 16:37:53,751 - risk_manager - INFO - Position added: AUDUSD, Lot: 0.22, Risk: 99.08
+2025-10-22 16:37:53,751 - __main__ - INFO - 🎯 AUDUSD: Trade executed - SELL 0.22 lots at 0.64949
+2025-10-22 16:37:53,778 - signal_generator - INFO - DEBUG NZDUSD: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-22 16:37:53,778 - signal_generator - INFO - DEBUG NZDUSD: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:37:53,779 - signal_generator - INFO - 🎯 NZDUSD Signal: SELL (4) - Confidence: 80.0% ML: 0.920
+2025-10-22 16:37:53,802 - trade_executor - INFO - ✅ Position opened: NZDUSD SELL 0.28 lots at 0.57435
+2025-10-22 16:37:53,804 - risk_manager - INFO - Position added: NZDUSD, Lot: 0.28, Risk: 99.26
+2025-10-22 16:37:53,804 - __main__ - INFO - 🎯 NZDUSD: Trade executed - SELL 0.28 lots at 0.57435
+2025-10-22 16:37:53,829 - signal_generator - INFO - DEBUG USDCHF: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:37:53,874 - signal_generator - INFO - DEBUG XAUUSD: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-22 16:37:53,874 - signal_generator - INFO - DEBUG XAUUSD: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:37:53,918 - signal_generator - INFO - DEBUG US30: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-22 16:37:53,919 - signal_generator - INFO - DEBUG US30: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-22 16:37:53,921 - signal_generator - INFO - 🎯 US30 Signal: SELL (3) - Confidence: 80.0% ML: 0.620
+2025-10-22 16:37:53,923 - trade_executor - WARNING - Order attempt 1 failed: Trade disabled
+2025-10-22 16:37:54,923 - trade_executor - WARNING - Order attempt 2 failed: Trade disabled
+2025-10-22 16:37:55,925 - trade_executor - WARNING - Order attempt 3 failed: Trade disabled
+2025-10-22 16:37:55,927 - __main__ - ERROR - ❌ US30: Trade execution failed - Trade disabled
+2025-10-22 16:37:56,041 - signal_generator - INFO - DEBUG EURAUD: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-22 16:38:03,343 - __main__ - INFO - ⚠️ Shutdown requested by user
+2025-10-22 16:38:03,343 - __main__ - INFO - 🔄 Initiating graceful shutdown...
