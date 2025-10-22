@@ -128,6 +128,52 @@ class ElliottWaveEngine:
             logger.error(f"Elliott Wave analysis error: {e}")
             return None
     
+    def analyze_waves(self, data: pd.DataFrame) -> Optional[Dict]:
+        """
+        Wrapper method for signal generator compatibility
+        Returns dictionary with impulses, abc_corrections, and trend_direction
+        """
+        try:
+            if data is None or len(data) < 50:
+                return None
+                
+            # Calculate ATR
+            data = self._calculate_atr(data)
+            
+            # Convert to numpy arrays
+            close = data['close'].values
+            atr = data['atr'].values
+            
+            # Run ZigZag analysis
+            pivots = self.h1_engine.zigzag(close, atr)
+            
+            if len(pivots) < 6:
+                logger.debug(f"Not enough pivots: {len(pivots)}")
+                return None
+            
+            # Detect impulse patterns
+            impulses = self.h1_engine.detect_impulses(pivots, close, atr)
+            
+            # Detect ABC patterns  
+            abcs = self.h1_engine.detect_abcs(pivots)
+            
+            # Determine trend direction from most recent impulse
+            trend_direction = None
+            if impulses:
+                recent_impulse = impulses[-1]  # Most recent
+                trend_direction = recent_impulse.direction
+            
+            return {
+                'impulses': impulses,
+                'abc_corrections': abcs,
+                'trend_direction': trend_direction,
+                'pivots': pivots
+            }
+            
+        except Exception as e:
+            logger.error(f"Wave analysis error: {e}")
+            return None
+
     def _calculate_atr(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate Average True Range"""
         df = data.copy()
