@@ -14,7 +14,7 @@ import threading
 from dataclasses import asdict
 
 # Import our modular components
-from elliott_wave_engine import ElliottWaveEngine
+from elliott_wave_engine_original import ElliottWaveEngine
 from market_data_manager import MarketDataManager
 from risk_manager import RiskManager, RiskParameters
 from signal_generator import SignalGenerator, TradingSignal
@@ -40,7 +40,7 @@ class ElliottWaveTradingEngine:
         self.elliott_engine = ElliottWaveEngine()
         self.market_data = MarketDataManager()
         self.risk_manager = RiskManager(RiskParameters(**self.config.get('risk_parameters', {})))
-        self.signal_generator = SignalGenerator()
+        self.signal_generator = SignalGenerator(config=self.config)
         self.trade_executor = TradeExecutor()
         
         # Trading state
@@ -311,6 +311,15 @@ class ElliottWaveTradingEngine:
                 # Monitor positions
                 position_status = self.trade_executor.monitor_positions()
                 
+                # CRITICAL: Update active positions in signal generator
+                active_symbols = set()
+                if position_status and 'positions' in position_status:
+                    for position in position_status['positions']:
+                        active_symbols.add(position.get('symbol', ''))
+                
+                # Update signal generator with current active positions
+                self.signal_generator.update_active_positions(active_symbols)
+                
                 # Update session stats
                 self._update_session_stats(position_status)
                 
@@ -447,14 +456,39 @@ class ElliottWaveTradingEngine:
 def main():
     """Main entry point"""
     import sys
+    import argparse
     
-    # Parse command line arguments
-    symbols_file = "symbols.txt"  # Default
-    if len(sys.argv) > 1:
-        symbols_file = sys.argv[1]
+    # Setup command line arguments
+    parser = argparse.ArgumentParser(description='Elliott Wave Live Trading System V2')
+    parser.add_argument('symbols_file', nargs='?', default='symbols.txt',
+                       help='Symbols file to use (default: symbols.txt)')
+    parser.add_argument('--ml-threshold', '--thr', type=float, default=None,
+                       help='ML threshold for signal filtering (e.g. 0.30 for top 30 percent)')
+    parser.add_argument('--no-ml', action='store_true',
+                       help='Disable ML filtering completely')
+    parser.add_argument('--no-ema', action='store_true',
+                       help='Disable EMA trend filtering')
+    parser.add_argument('--config', default='elliott_live_config_v2.json',
+                       help='Configuration file to use')
+    parser.add_argument('--interval', type=int, default=60,
+                       help='Scan interval in seconds (default: 60)')
+    parser.add_argument('--max-dd-check', action='store_true',
+                       help='Enable maximum drawdown monitoring')
+    
+    args = parser.parse_args()
+    
+    # Set configuration
+    symbols_file = args.symbols_file
     
     print(f"🎯 Elliott Wave Trading Engine V2")
     print(f"📋 Using symbols file: {symbols_file}")
+    if args.ml_threshold:
+        print(f"🤖 ML Threshold: {args.ml_threshold}")
+    if args.no_ml:
+        print(f"🚫 ML Filtering: DISABLED")
+    if args.no_ema:
+        print(f"🚫 EMA Filtering: DISABLED")
+    print(f"📊 Scan Interval: {args.interval}s")
     print(f"{'='*50}")
     
     # Setup logging with UTF-8 encoding
@@ -470,8 +504,24 @@ def main():
     logger = logging.getLogger(__name__)
     
     try:
-        # Create trading engine with custom symbols file
-        engine = ElliottWaveTradingEngine(symbols_file=symbols_file)
+        # Create trading engine with custom parameters
+        engine = ElliottWaveTradingEngine(
+            config_file=args.config,
+            symbols_file=symbols_file
+        )
+        
+        # Apply command line overrides
+        if args.ml_threshold is not None:
+            engine.config['ml_threshold'] = args.ml_threshold
+        if args.no_ml:
+            engine.config['use_ml_filter'] = False
+        if args.no_ema:
+            engine.config['use_ema_filter'] = False
+        if args.interval:
+            engine.config['scan_interval'] = args.interval
+            
+        # Set max DD monitoring
+        engine.config['max_dd_check'] = args.max_dd_check
         
         # Initialize
         if not engine.initialize():

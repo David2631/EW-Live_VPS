@@ -11,7 +11,7 @@ from enum import Enum
 import logging
 from datetime import datetime
 
-from elliott_wave_engine import ElliottWaveEngine, Direction, Impulse, ABC
+from elliott_wave_engine_original import ElliottWaveEngine, Dir, Impulse, ABC
 
 class SignalType(Enum):
     """Trading signal types"""
@@ -41,7 +41,7 @@ class TradingSignal:
     
     # Elliott Wave context
     wave_pattern: str
-    wave_direction: Direction
+    wave_direction: Dir
     current_wave: str
     fibonacci_level: Optional[float]
     
@@ -59,6 +59,11 @@ class TradingSignal:
     timestamp: datetime
     reasoning: str
     
+    # ML metrics
+    ml_score: Optional[float] = None
+    ml_threshold: Optional[float] = None
+    ml_passed: bool = True
+    
     def to_dict(self) -> Dict:
         """Convert signal to dictionary for logging/storage"""
         return {
@@ -74,6 +79,9 @@ class TradingSignal:
             'current_wave': self.current_wave,
             'fibonacci_level': self.fibonacci_level,
             'reward_risk_ratio': self.reward_risk_ratio,
+            'ml_score': self.ml_score,
+            'ml_threshold': self.ml_threshold,
+            'ml_passed': self.ml_passed,
             'timestamp': self.timestamp.isoformat(),
             'reasoning': self.reasoning
         }
@@ -84,16 +92,66 @@ class SignalGenerator:
     Converts wave patterns into high-probability trading signals
     """
     
-    def __init__(self):
+    def __init__(self, config: Dict = None):
         self.logger = logging.getLogger(__name__)
-        self.elliott_engine = ElliottWaveEngine()
+        # Initialize Elliott Wave Engine with ORIGINAL backtest settings
+        self.elliott_engine = ElliottWaveEngine({
+            'PRIMARY_ZZ_PCT': 0.012,      # Original (restored)
+            'PRIMARY_ZZ_ATR_MULT': 0.90,  # Original (restored)
+            'PRIMARY_MIN_IMP_ATR': 1.8,   # Original (restored)
+            'H1_ZZ_PCT': 0.0020,          # Original (restored)
+            'H1_ZZ_ATR_MULT': 0.60,       # Original (restored)
+            'H1_MIN_IMP_ATR': 1.6,        # Original (restored)
+            'ENTRY_ZONE_W3': (0.382, 0.786),
+            'ENTRY_ZONE_W5': (0.236, 0.618),
+            'ENTRY_ZONE_C': (0.382, 0.786),
+            'TP1': 1.272,
+            'TP2': 1.618,
+            'ATR_PERIOD': 14,
+            'ATR_MULT_BUFFER': 0.20       # Original (restored)
+        })
+        
+        # Load configuration
+        self.config = config or {}
         
         # Signal configuration
         self.min_confidence = 70.0  # Minimum confidence for signal generation
         self.max_spread_pips = 3.0  # Maximum spread for signal validity
         
+        # Position tracking - CRITICAL: Prevent duplicate positions
+        self.active_positions = set()  # Track symbols with open positions
+        self.recent_signals = {}  # Track recent signals to prevent duplicates
+        self.signal_cooldown = 300  # 5 minutes cooldown between same signals
+        
+        # ML Filter configuration
+        self.use_ml_filter = self.config.get('use_ml_filter', True)
+        self.ml_threshold = self.config.get('ml_threshold', 0.3)  # ORIGINAL: 30% threshold (Top 30%)
+        
+        # EMA Filter configuration  
+        self.use_ema_filter = self.config.get('use_ema_filter', True)
+        
         # Fibonacci retracement levels for entries
         self.fib_levels = [0.236, 0.382, 0.5, 0.618, 0.786]
+    
+    def update_active_positions(self, active_symbols: set):
+        """Update list of symbols with active positions"""
+        self.active_positions = active_symbols
+    
+    def _check_signal_cooldown(self, symbol: str, signal_type: str) -> bool:
+        """Check if signal is in cooldown period"""
+        from datetime import datetime, timedelta
+        
+        signal_key = f"{symbol}_{signal_type}"
+        now = datetime.now()
+        
+        if signal_key in self.recent_signals:
+            last_signal = self.recent_signals[signal_key]
+            if (now - last_signal).total_seconds() < self.signal_cooldown:
+                return True  # Still in cooldown
+        
+        # Update last signal time
+        self.recent_signals[signal_key] = now
+        return False  # Not in cooldown
         
     def generate_signal(self, symbol: str, df: pd.DataFrame, current_price: Dict) -> Optional[TradingSignal]:
         """
@@ -107,6 +165,11 @@ class SignalGenerator:
         try:
             if len(df) < 100:
                 self.logger.warning(f"{symbol}: Insufficient data for signal generation")
+                return None
+            
+            # CRITICAL: Check if position already exists for this symbol
+            if symbol in self.active_positions:
+                self.logger.debug(f"{symbol}: Position already active - skipping signal generation")
                 return None
             
             # Check spread conditions
@@ -131,20 +194,42 @@ class SignalGenerator:
             )
             
             if signal and signal.confidence >= self.min_confidence:
-                self.logger.info(f"🎯 {symbol} Signal: {signal.signal_type.value} "
-                               f"({signal.strength.value}) - Confidence: {signal.confidence:.1f}%")
-                return signal
+                # Check signal cooldown to prevent duplicates
+                if self._check_signal_cooldown(symbol, signal.signal_type.value):
+                    self.logger.debug(f"{symbol}: Signal {signal.signal_type.value} in cooldown period")
+                    return None
+                
+                # Apply ML filtering if enabled
+                signal = self._apply_ml_filter(signal, df)
+                
+                if signal and signal.ml_passed:
+                    self.logger.info(f"🎯 {symbol} Signal: {signal.signal_type.value} "
+                                   f"({signal.strength.value}) - Confidence: {signal.confidence:.1f}% "
+                                   f"ML: {signal.ml_score:.3f}")
+                    return signal
+                elif signal:
+                    self.logger.info(f"🚫 {symbol} Signal filtered by ML: Score {signal.ml_score:.3f} < {signal.ml_threshold:.3f}")
             
             return None
             
         except Exception as e:
+            import traceback
             self.logger.error(f"Signal generation error for {symbol}: {e}")
+            self.logger.error(f"Full traceback: {traceback.format_exc()}")
             return None
     
     def _evaluate_elliott_patterns(self, symbol: str, df: pd.DataFrame, current_price: Dict,
                                  impulses: List[Impulse], abc_corrections: List[ABC], 
-                                 trend_direction: Direction) -> Optional[TradingSignal]:
+                                 trend_direction: Dir) -> Optional[TradingSignal]:
         """Evaluate Elliott Wave patterns for trading opportunities"""
+        
+        # DEBUG: Check actual object types and attributes
+        if impulses:
+            imp = impulses[0]
+            self.logger.info(f"DEBUG {symbol}: Impulse type={type(imp)}, has_wave_3_end={hasattr(imp, 'wave_3_end')}, has_confidence={hasattr(imp, 'confidence')}")
+        if abc_corrections:
+            abc = abc_corrections[0]
+            self.logger.info(f"DEBUG {symbol}: ABC type={type(abc)}, has_a_end={hasattr(abc, 'a_end')}, has_confidence={hasattr(abc, 'confidence')}")
         
         current_close = df['close'].iloc[-1]
         current_bid = current_price['bid']
@@ -196,7 +281,7 @@ class SignalGenerator:
         if abs(current_close - wave5_price) / wave5_price < 0.005:  # Within 0.5%
             
             # Determine reversal direction
-            if recent_impulse.direction == Direction.UP:
+            if recent_impulse.direction == Dir.UP:
                 # Bullish impulse completed - expect bearish reversal
                 signal_type = SignalType.SELL
                 entry_price = current_bid
@@ -211,6 +296,10 @@ class SignalGenerator:
                 take_profit = recent_impulse.wave_4_end.price  # Target Wave 4 level
             
             # Calculate metrics
+            # Validate stop loss and take profit meet broker requirements
+            stop_loss = self._validate_stop_loss(entry_price, stop_loss, symbol)
+            take_profit = self._validate_take_profit(entry_price, take_profit, symbol)
+            
             stop_pips = self._calculate_pips(entry_price, stop_loss, symbol)
             tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
             rr_ratio = abs(tp_pips) / abs(stop_pips) if stop_pips != 0 else 0
@@ -260,7 +349,7 @@ class SignalGenerator:
                 current_close = df['close'].iloc[-1]
                 
                 # Check if we're in early Wave 4 retracement
-                if impulse.direction == Direction.UP:
+                if impulse.direction == Dir.UP:
                     retracement = (wave3_price - current_close) / (wave3_price - wave2_price)
                     if 0.2 < retracement < 0.5:  # 20-50% retracement
                         
@@ -268,6 +357,10 @@ class SignalGenerator:
                         entry_price = current_ask
                         stop_loss = wave2_price * 0.995  # Below Wave 2
                         take_profit = wave3_price * 1.618  # Wave 5 target (1.618 extension)
+                        
+                        # Validate stop loss and take profit meet broker requirements
+                        stop_loss = self._validate_stop_loss(entry_price, stop_loss, symbol)
+                        take_profit = self._validate_take_profit(entry_price, take_profit, symbol)
                         
                         stop_pips = self._calculate_pips(entry_price, stop_loss, symbol)
                         tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
@@ -299,7 +392,7 @@ class SignalGenerator:
                             )
                 
                 # Similar logic for bearish Wave 3
-                elif impulse.direction == Direction.DOWN:
+                elif impulse.direction == Dir.DOWN:
                     retracement = (current_close - wave3_price) / (wave2_price - wave3_price)
                     if 0.2 < retracement < 0.5:
                         
@@ -307,6 +400,10 @@ class SignalGenerator:
                         entry_price = current_bid
                         stop_loss = wave2_price * 1.005
                         take_profit = wave3_price * 0.382  # Wave 5 target
+                        
+                        # Validate stop loss and take profit meet broker requirements
+                        stop_loss = self._validate_stop_loss(entry_price, stop_loss, symbol)
+                        take_profit = self._validate_take_profit(entry_price, take_profit, symbol)
                         
                         stop_pips = self._calculate_pips(entry_price, stop_loss, symbol)
                         tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
@@ -358,7 +455,7 @@ class SignalGenerator:
                 if abs(current_close - c_price) / c_price < 0.01:  # Within 1%
                     
                     # Determine trend resumption direction
-                    if abc.direction == Direction.DOWN:  # Corrective down, expect up
+                    if abc.direction == Dir.DOWN:  # Corrective down, expect up
                         signal_type = SignalType.BUY
                         entry_price = current_ask
                         stop_loss = c_price * 0.995
@@ -369,6 +466,10 @@ class SignalGenerator:
                         entry_price = current_bid
                         stop_loss = c_price * 1.005
                         take_profit = a_price * 0.9  # Below A wave
+                    
+                    # Validate stop loss and take profit meet broker requirements
+                    stop_loss = self._validate_stop_loss(entry_price, stop_loss, symbol)
+                    take_profit = self._validate_take_profit(entry_price, take_profit, symbol)
                     
                     stop_pips = self._calculate_pips(entry_price, stop_loss, symbol)
                     tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
@@ -409,20 +510,106 @@ class SignalGenerator:
         return None
     
     def _calculate_pips(self, price1: float, price2: float, symbol: str) -> float:
-        """Calculate pip difference between two prices"""
+        """Calculate pip difference between two prices (always returns positive distance)"""
         if 'JPY' in symbol:
-            return (price1 - price2) * 100
-        elif symbol in ['XAUUSD']:
-            return (price1 - price2) * 10
-        elif symbol.startswith('US') or symbol in ['NAS100']:
-            return price1 - price2
+            return abs(price1 - price2) * 100
+        elif symbol in ['XAUUSD', 'XAGUSD']:
+            return abs(price1 - price2) * 10
+        elif symbol.startswith('US') or symbol in ['NAS100', 'UK100', 'DE40']:
+            # Indices: 1 pip = 1 point (e.g., US30: 46743.0 -> 46744.0 = 1 pip)
+            return abs(price1 - price2)
         else:
-            return (price1 - price2) * 10000
+            # Standard currency pairs: 0.0001 = 1 pip
+            return abs(price1 - price2) * 10000
     
     def _calculate_spread_pips(self, current_price: Dict, symbol: str) -> float:
         """Calculate current spread in pips"""
         spread = current_price['spread']
         return self._calculate_pips(current_price['ask'], current_price['bid'], symbol)
+    
+    def _validate_stop_loss(self, entry_price: float, stop_loss: float, symbol: str) -> float:
+        """Validate and adjust stop loss to meet broker requirements"""
+        
+        # Calculate minimum stop distance (maximum conservative for strict brokers)
+        min_stop_pips = {
+            'EURUSD': 60, 'GBPUSD': 120, 'AUDUSD': 100, 'NZDUSD': 60,
+            'USDCHF': 60, 'USDCAD': 80, 'USDJPY': 50,
+            'XAUUSD': 200, 'XAGUSD': 120,  # Metals need larger stops
+            'US30': 300, 'NAS100': 200, 'UK100': 200, 'DE40': 150,  # Indices
+            'default': 80
+        }
+        
+        # Get minimum stop for this symbol
+        min_pips = min_stop_pips.get(symbol, min_stop_pips['default'])
+        
+        # Add spread buffer (some brokers require stop > spread + minimum)
+        spread_buffer = 10  # Extra 10 pips buffer for strict brokers
+        total_min_pips = min_pips + spread_buffer
+        
+        # Calculate current stop distance in pips  
+        current_stop_pips = self._calculate_pips(entry_price, stop_loss, symbol)
+        
+        # If stop is too small, adjust it
+        if current_stop_pips < total_min_pips:
+            # Adjust stop loss to minimum distance
+            if stop_loss > entry_price:  # Stop above entry (short position)
+                stop_loss = entry_price + (total_min_pips / self._get_pip_factor(symbol))
+            else:  # Stop below entry (long position)  
+                stop_loss = entry_price - (total_min_pips / self._get_pip_factor(symbol))
+                
+            self.logger.info(f"{symbol}: Adjusted stop loss from {current_stop_pips:.1f} to {total_min_pips} pips (min: {min_pips} + buffer: {spread_buffer})")
+        
+        return stop_loss
+    
+    def _validate_take_profit(self, entry_price: float, take_profit: float, symbol: str) -> float:
+        """Validate and adjust take profit to meet broker requirements"""
+        
+        # Same minimum distance requirements as stop loss (extra conservative for strict brokers)
+        min_tp_pips = {
+            'EURUSD': 60, 'GBPUSD': 120, 'AUDUSD': 100, 'NZDUSD': 60,
+            'USDCHF': 60, 'USDCAD': 80, 'USDJPY': 50,
+            'XAUUSD': 200, 'XAGUSD': 120,  # Metals need larger distances
+            'US30': 300, 'NAS100': 200, 'UK100': 200, 'DE40': 150,  # Indices
+            'default': 80
+        }
+        
+        # Get minimum TP distance for this symbol
+        min_pips = min_tp_pips.get(symbol, min_tp_pips['default'])
+        
+        # Add spread buffer
+        spread_buffer = 10  # Extra 10 pips buffer for strict brokers
+        total_min_pips = min_pips + spread_buffer
+        
+        # Calculate current TP distance in pips
+        current_tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
+        
+        # Debug logging
+        self.logger.info(f"{symbol}: TP Check - Current: {current_tp_pips:.1f} pips, Required: {total_min_pips} pips")
+        
+        # If TP is too small, adjust it
+        if current_tp_pips < total_min_pips:
+            # Adjust take profit to minimum distance
+            if take_profit > entry_price:  # TP above entry (long position)
+                take_profit = entry_price + (total_min_pips / self._get_pip_factor(symbol))
+            else:  # TP below entry (short position)  
+                take_profit = entry_price - (total_min_pips / self._get_pip_factor(symbol))
+                
+            self.logger.info(f"{symbol}: Adjusted take profit from {current_tp_pips:.1f} to {total_min_pips} pips (min: {min_pips} + buffer: {spread_buffer})")
+        else:
+            self.logger.info(f"{symbol}: Take profit OK at {current_tp_pips:.1f} pips")
+        
+        return take_profit
+    
+    def _get_pip_factor(self, symbol: str) -> float:
+        """Get pip factor for symbol"""
+        if 'JPY' in symbol:
+            return 100.0  # JPY pairs: 0.01 = 1 pip
+        elif symbol in ['XAUUSD', 'XAGUSD']:
+            return 10.0   # Metals: 0.1 = 1 pip  
+        elif symbol in ['US30', 'NAS100', 'UK100', 'DE40']:
+            return 1.0    # Indices: 1.0 = 1 pip
+        else:
+            return 10000.0  # Standard pairs: 0.0001 = 1 pip
     
     def _calculate_signal_strength(self, df: pd.DataFrame, wave_confidence: float, rr_ratio: float) -> SignalStrength:
         """Calculate signal strength based on multiple factors"""
@@ -459,6 +646,10 @@ class SignalGenerator:
     
     def _check_trend_alignment(self, df: pd.DataFrame) -> bool:
         """Check if price aligns with major trend"""
+        # Skip EMA check if disabled
+        if not self.use_ema_filter:
+            return True
+            
         if len(df) < 50:
             return False
         
@@ -495,7 +686,59 @@ class SignalGenerator:
         current_volume = df['tick_volume'].iloc[-1]
         avg_volume = df['tick_volume'].rolling(20).mean().iloc[-1]
         
-        return current_volume > avg_volume * 1.2  # 20% above average
+        return current_volume > avg_volume * 0.8  # At least 80% of average volume
+    
+    def _apply_ml_filter(self, signal: TradingSignal, df: pd.DataFrame) -> TradingSignal:
+        """Apply ML filtering to trading signal"""
+        if not self.use_ml_filter:
+            signal.ml_passed = True
+            signal.ml_score = 1.0
+            signal.ml_threshold = None
+            return signal
+        
+        # Calculate ML score based on signal features
+        ml_score = self._calculate_ml_score(signal, df)
+        
+        # Apply threshold
+        ml_passed = ml_score >= self.ml_threshold
+        
+        # Update signal with ML metrics
+        signal.ml_score = ml_score
+        signal.ml_threshold = self.ml_threshold
+        signal.ml_passed = ml_passed
+        
+        return signal
+    
+    def _calculate_ml_score(self, signal: TradingSignal, df: pd.DataFrame) -> float:
+        """Calculate ML score for signal quality"""
+        score = 0.0
+        
+        # Base score from signal confidence
+        score += signal.confidence / 100.0 * 0.4
+        
+        # Reward/Risk ratio bonus
+        if signal.reward_risk_ratio > 3.0:
+            score += 0.2
+        elif signal.reward_risk_ratio > 2.0:
+            score += 0.1
+        
+        # Signal strength bonus
+        if signal.strength == SignalStrength.VERY_STRONG:
+            score += 0.2
+        elif signal.strength == SignalStrength.STRONG:
+            score += 0.1
+        
+        # Technical alignment bonus
+        if signal.trend_alignment:
+            score += 0.1
+        
+        if signal.momentum_confirmation:
+            score += 0.1
+        
+        # Ensure score is between 0 and 1
+        return min(max(score, 0.0), 1.0)
+
+# Testing function
 
 if __name__ == "__main__":
     # Test signal generator
