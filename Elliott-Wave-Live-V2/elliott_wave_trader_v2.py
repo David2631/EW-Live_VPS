@@ -93,7 +93,7 @@ class ElliottWaveTradingEngine:
             return {
                 'symbols': ['EURUSD', 'XAUUSD', 'US30', 'NAS100', 'US500.f', 'AUDNOK'],
                 'timeframes': [mt5.TIMEFRAME_M30],
-                'scan_interval': 60,
+                'scan_interval': 120,
                 'account_balance': 10000,
                 'risk_parameters': {
                     'max_risk_per_trade': 0.01,
@@ -245,9 +245,13 @@ class ElliottWaveTradingEngine:
                 return  # Too soon since last analysis
             
             # Get market data
+            self.logger.debug(f"📊 {symbol}: Fetching market data...")
             df = self.market_data.get_live_data(symbol, mt5.TIMEFRAME_M30, 200)
             if df is None or not self.market_data.validate_data_quality(df, symbol):
+                self.logger.warning(f"❌ {symbol}: No valid data available")
                 return
+            else:
+                self.logger.debug(f"✅ {symbol}: Got {len(df)} bars of data")
             
             # Get current price
             current_price = self.market_data.get_current_price(symbol)
@@ -310,15 +314,6 @@ class ElliottWaveTradingEngine:
             try:
                 # Monitor positions
                 position_status = self.trade_executor.monitor_positions()
-                
-                # CRITICAL: Update active positions in signal generator
-                active_symbols = set()
-                if position_status and 'positions' in position_status:
-                    for position in position_status['positions']:
-                        active_symbols.add(position.get('symbol', ''))
-                
-                # Update signal generator with current active positions
-                self.signal_generator.update_active_positions(active_symbols)
                 
                 # Update session stats
                 self._update_session_stats(position_status)
