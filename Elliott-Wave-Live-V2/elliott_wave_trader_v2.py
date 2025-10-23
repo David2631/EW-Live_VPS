@@ -93,7 +93,7 @@ class ElliottWaveTradingEngine:
             return {
                 'symbols': ['EURUSD', 'XAUUSD', 'US30', 'NAS100', 'US500.f', 'AUDNOK'],
                 'timeframes': [mt5.TIMEFRAME_M30],
-                'scan_interval': 60,
+                'scan_interval': 120,
                 'account_balance': 10000,
                 'risk_parameters': {
                     'max_risk_per_trade': 0.01,
@@ -241,8 +241,13 @@ class ElliottWaveTradingEngine:
         try:
             # Check if enough time has passed since last analysis
             now = datetime.now()
-            if (now - self.last_analysis_time.get(symbol, datetime.min)).seconds < 30:
-                return  # Too soon since last analysis
+            last_analysis = self.last_analysis_time.get(symbol, datetime.min)
+            seconds_since_last = (now - last_analysis).total_seconds()
+            
+            # Skip only if analyzed in last 10 seconds (prevent spam)
+            if seconds_since_last < 10:
+                self.logger.debug(f"⏭️ {symbol}: Skipping - analyzed {seconds_since_last:.1f}s ago")
+                return "skipped"  # Too soon since last analysis
             
             # Get market data
             df = self.market_data.get_live_data(symbol, mt5.TIMEFRAME_M30, 200)
@@ -470,8 +475,8 @@ def main():
                        help='Disable EMA trend filtering')
     parser.add_argument('--config', default='elliott_live_config_v2.json',
                        help='Configuration file to use')
-    parser.add_argument('--interval', type=int, default=60,
-                       help='Scan interval in seconds (default: 60)')
+    parser.add_argument('--interval', type=int, default=120,
+                       help='Scan interval in seconds (default: 120)')
     parser.add_argument('--max-dd-check', action='store_true',
                        help='Enable maximum drawdown monitoring')
     
