@@ -13,7 +13,7 @@ USDCAD
 
 # Precious Metals
 XAUUSD
-XAGUSD
+# XAGUSD - Temporarily disabled (pip calibration issue)
 
 # US Indices
 US30
