@@ -669,12 +669,14 @@ class TradeExecutor:
             if symbol_info:
                 filling_mode = symbol_info.filling_mode
                 self.logger.error(f"   Available filling modes for {symbol}:")
+                self.logger.error(f"   Filling mode value: {filling_mode}")
                 
-                if filling_mode & mt5.SYMBOL_FILLING_FOK:
+                # Use numeric values instead of constants that may not exist
+                if filling_mode & 1:  # FOK
                     self.logger.error(f"   ✅ FOK (Fill or Kill)")
-                if filling_mode & mt5.SYMBOL_FILLING_IOC:
+                if filling_mode & 2:  # IOC  
                     self.logger.error(f"   ✅ IOC (Immediate or Cancel)")
-                if filling_mode & mt5.SYMBOL_FILLING_RETURN:
+                if filling_mode & 4:  # RETURN
                     self.logger.error(f"   ✅ RETURN (Return)")
                     
                 if filling_mode == 0:
@@ -697,15 +699,16 @@ class TradeExecutor:
                     execution_time=datetime.now()
                 )
             
+            # Try filling modes: RETURN, IOC, FOK
             filling_modes = [
-                (mt5.ORDER_FILLING_RETURN, "RETURN"),
-                (mt5.ORDER_FILLING_IOC, "IOC"), 
-                (mt5.ORDER_FILLING_FOK, "FOK")
+                (mt5.ORDER_FILLING_RETURN, "RETURN", 4),  # RETURN = 4
+                (mt5.ORDER_FILLING_IOC, "IOC", 2),        # IOC = 2  
+                (mt5.ORDER_FILLING_FOK, "FOK", 1)         # FOK = 1
             ]
             
-            for filling_mode, mode_name in filling_modes:
+            for filling_mode, mode_name, bit_mask in filling_modes:
                 # Check if this filling mode is supported
-                if not (symbol_info.filling_mode & (1 << (filling_mode - 1))):
+                if not (symbol_info.filling_mode & bit_mask):
                     self.logger.warning(f"   ⚠️ {mode_name} not supported for {symbol}")
                     continue
                 
