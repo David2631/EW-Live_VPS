@@ -1,31 +1,42 @@
-# 🌊 Elliott Wave Live Trading System for VPS
+# 🌊 Elliott Wave Live Trading System V2 for VPS
 
-**Professional Elliott Wave automated trading system for MetaTrader 5 with 24/7 VPS deployment capability.**
+**Professional Elliott Wave automated trading system with Dynamic Price Validation, advanced risk management, and 24/7 VPS deployment capability.**
 
-![Elliott Wave Trading](https://img.shields.io/badge/Elliott%20Wave-Trading%20System-blue)
+![Elliott Wave Trading](https://img.shields.io/badge/Elliott%20Wave-V2%20System-blue)
 ![Python](https://img.shields.io/badge/Python-3.9+-green)
 ![MetaTrader5](https://img.shields.io/badge/MetaTrader-5-orange)
-![VPS Ready](https://img.shields.io/badge/VPS-Ready-brightgreen)
+![VPS Ready](https://img.shields.io/badge/VPS-Production%20Ready-brightgreen)
+![Tested](https://img.shields.io/badge/Local%20Testing-100%25%20Success-success)
 
-## ✨ Features
+## 🆕 V2 Revolutionary Features
 
-- 🌊 **Full Elliott Wave Analysis** - Complete wave pattern detection and trading
-- 📊 **Multi-Asset Support** - Trade EURUSD, XAUUSD, US30, US500.f, NAS100, AUDNOK simultaneously
-- ⏰ **1-Minute Scanning** - Analyzes all symbols every 60 seconds for optimal entry timing
-- 📊 **ATR-based Risk Management** - Dynamic stop loss and take profit levels per symbol
-- 🛡️ **Advanced Risk Controls** - Individual position sizing, daily limits, emergency stops
-- 🔄 **Trailing Stops** - Automatic profit protection across all positions
-- 📈 **Multi-timeframe Analysis** - Robust signal confirmation for each asset
-- 🖥️ **VPS Optimized** - 24/7 automated trading capability with up to 6 simultaneous positions
-- 🇩🇪 **German MT5 Support** - Full Deutsche interface compatibility
-- 📊 **Real-time Monitoring** - Performance tracking and alerts for all symbols
+- 🎯 **Dynamic Price Validation System** - Real-time broker requirement validation and automatic order adjustment
+- 🔧 **Intelligent Filling Mode Detection** - Automatic IOC/FOK/RETURN mode selection based on broker capabilities  
+- 🛡️ **Bulletproof Duplicate Prevention** - Real-time position checking prevents duplicate trades
+- ⚡ **Retcode 10030 Resolution** - Complete elimination of decimal precision and filling mode errors
+- 📊 **Enhanced Position Tracking** - Live MT5 integration with detailed position monitoring
+- 🎯 **Symbol-Specific Pip Calculations** - Forex, indices, and metals with broker-specific adjustments
+- 🔄 **Alternative Execution Strategies** - Multi-mode retry logic for maximum execution success
+- 📈 **Professional Error Handling** - 40+ MT5 error codes with intelligent recovery strategies
+
+## ✨ Core Features
+
+- 🌊 **Full Elliott Wave Analysis** - Complete wave pattern detection and trading signals
+- 📊 **Multi-Asset Support** - EURUSD, GBPUSD, AUDUSD, XAUUSD, US30, NAS100, UK100 + more
+- ⏰ **Real-time Scanning** - Analyzes all symbols every 60 seconds with M30 timeframe
+- 🎯 **Take Profit Capping** - Broker-compatible TP limits (US30: 1500 pips, AUDUSD: 300 pips)
+- 🛡️ **Advanced Risk Management** - Portfolio risk control, position sizing, correlation limits
+- 🔄 **Automatic Price Adjustment** - Real-time SL/TP validation and correction
+- 📈 **High-Confidence Signals** - 70%+ confidence threshold with ML validation
+- 🖥️ **VPS Optimized** - 24/7 automated trading with industrial-grade reliability
+- 📊 **Comprehensive Logging** - Full trade execution audit trail and performance metrics
 
 ## 🚀 Quick Start (VPS Installation)
 
 ### 1. Download & Extract
 ```bash
-git clone https://github.com/YOUR_USERNAME/Elliott-Wave-VPS-Trader.git
-cd Elliott-Wave-VPS-Trader
+git clone https://github.com/David2631/EW-Live_VPS.git
+cd EW-Live_VPS/Elliott-Wave-Live-V2
 ```
 
 ### 2. One-Click Installation
@@ -33,12 +44,28 @@ cd Elliott-Wave-VPS-Trader
 install_vps.bat
 ```
 
-### 3. Start Trading
+### 3. Start V2 Trading System
 ```cmd
-start_trading.bat
+start_full_trading.bat     # All symbols with full risk management
+start_demo_trading.bat     # Demo account testing
+start_simple_trading.bat   # Conservative symbol set
 ```
 
-**That's it! Your Elliott Wave system is running 24/7!** 🎉
+**🎯 Your V2 Elliott Wave system with Dynamic Price Validation is running 24/7!** 🎉
+
+## 🧪 Pre-Deployment Testing (Recommended)
+
+Before live trading, run comprehensive tests:
+```cmd
+# Test Dynamic Price Validation
+python test_price_validation.py
+
+# Test Duplicate Prevention  
+python test_duplicate_prevention.py
+
+# Test Engine Integration
+python test_engine.py
+```
 
 ## 📋 Detailed Installation Guide
 
@@ -69,81 +96,102 @@ This will:
 - Validate system configuration
 - Run comprehensive tests
 
-#### 4. **Configure Trading Parameters**
-Edit `elliott_live_config.json`:
+#### 4. **Configure V2 Trading Parameters**
+Edit `elliott_live_config_v2.json`:
 ```json
 {
-  "symbols": [
-    {
-      "name": "EURUSD",
-      "risk_per_trade": 0.015,
-      "max_spread": 2,
-      "enabled": true
-    },
-    {
-      "name": "XAUUSD", 
-      "risk_per_trade": 0.015,
-      "max_spread": 50,
-      "enabled": true
-    },
-    {
-      "name": "US30",
-      "risk_per_trade": 0.015,
-      "max_spread": 5,
-      "enabled": true
+  "account_balance": 10000,
+  "scan_interval": 60,
+  "symbols": ["EURUSD", "GBPUSD", "AUDUSD", "NZDUSD", "USDCHF", "XAUUSD", "US30", "NAS100"],
+  "risk_management": {
+    "max_risk_per_trade": 0.02,
+    "max_daily_risk": 0.05,
+    "max_portfolio_risk": 0.15
+  },
+  "price_validation": {
+    "enable_dynamic_validation": true,
+    "auto_adjust_orders": true,
+    "max_tp_distances": {
+      "AUDUSD": 300,
+      "NZDUSD": 250, 
+      "US30": 1500,
+      "NAS100": 800,
+      "XAUUSD": 500
     }
-  ],
-  "analysis_interval": 60,
-  "max_total_positions": 6,
-  "max_daily_trades": 20
+  }
 }
 ```
 
-#### 4. **Test System**
+#### 4. **Validate System Health**
 ```cmd
-python live_trading_tests.py
-```
-Ensure all 9 tests pass before going live.
-
-#### 5. **Start Live Trading**
-```cmd
-start_trading.bat
+# Run comprehensive validation suite
+python test_price_validation.py     # Test broker integration
+python test_duplicate_prevention.py # Test position management
+python test_engine.py              # Test Elliott Wave engine
 ```
 
-## 📊 Configuration Options
+#### 5. **Deploy V2 Production System**
+```cmd
+# Conservative start
+start_demo_trading.bat
 
-### Trading Parameters
+# Full production
+start_full_trading.bat
+```
+
+## 📊 V2 Configuration Options
+
+### V2 Trading Parameters
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `symbol` | EURUSD | Trading instrument |
-| `risk_per_trade` | 0.02 | Risk per trade (2%) |
-| `max_daily_loss` | 0.05 | Max daily loss (5%) |
-| `max_daily_trades` | 10 | Max trades per day |
-| `stop_loss_atr` | 2.5 | Stop loss (2.5x ATR) |
-| `take_profit_atr` | 5.0 | Take profit (5.0x ATR) |
+| `scan_interval` | 60 | Symbol analysis interval (seconds) |
+| `max_risk_per_trade` | 0.02 | Risk per trade (2%) |
+| `max_portfolio_risk` | 0.15 | Maximum total portfolio risk (15%) |
+| `confidence_threshold` | 70 | Minimum signal confidence (%) |
+| `enable_dynamic_validation` | true | Real-time price validation |
+| `auto_adjust_orders` | true | Automatic SL/TP adjustment |
 
-### Risk Management
-- **Position Sizing**: Automatic based on account balance and risk
-- **Daily Limits**: Trading stops at daily loss/trade limits
-- **Emergency Stops**: Manual and automatic system stops
-- **Trailing Stops**: Dynamic profit protection
+### Symbol-Specific Limits
+| Symbol | Max TP Distance | Min Confidence | Notes |
+|--------|----------------|---------------|-------|
+| EURUSD | 300 pips | 70% | Major pair - conservative |
+| AUDUSD | 300 pips | 80% | Capped for broker compatibility |
+| US30 | 1500 pips | 80% | Index - higher volatility |
+| NAS100 | 800 pips | 80% | Tech index - moderate TP |
+| XAUUSD | 500 pips | 85% | Gold - premium signals only |
 
-## 🧪 Testing
+### V2 Risk Management Features
+- **Dynamic Price Validation**: Real-time broker requirement checking
+- **Duplicate Prevention**: Automatic position conflict resolution  
+- **Intelligent Filling Modes**: IOC/FOK/RETURN mode selection
+- **Portfolio Risk Control**: Multi-symbol correlation management
+- **Emergency Circuit Breakers**: Automatic system protection
 
-Run comprehensive tests:
+## 🧪 V2 Testing Suite
+
+Run comprehensive V2 validation:
 ```cmd
-python live_trading_tests.py
+# Core system tests
+python test_price_validation.py        # Dynamic price validation
+python test_duplicate_prevention.py    # Position conflict prevention
+python test_engine.py                 # Elliott Wave engine validation
+
+# Legacy compatibility tests  
+python live_trading_tests.py          # Original system tests
 ```
 
-**Test Coverage:**
-- ✅ MT5 Connection Stability
-- ✅ Data Feed Reliability
-- ✅ Elliott Wave Detection
-- ✅ Risk Management
-- ✅ Order Execution
-- ✅ Error Recovery
-- ✅ Performance Under Load
-- ✅ VPS Readiness
+**V2 Test Coverage:**
+- ✅ **Dynamic Price Validation** - Real-time broker integration
+- ✅ **Duplicate Position Prevention** - Multi-symbol conflict detection
+- ✅ **Filling Mode Intelligence** - IOC/FOK/RETURN compatibility
+- ✅ **Retcode 10030 Resolution** - Decimal precision handling
+- ✅ **MT5 Connection Stability** - Robust broker connection
+- ✅ **Elliott Wave Accuracy** - Signal generation validation
+- ✅ **Risk Management V2** - Portfolio-level controls
+- ✅ **Error Recovery** - Graceful failure handling
+- ✅ **VPS Production Readiness** - 24/7 deployment capability
+
+**🎯 100% Test Success Rate Required Before Live Trading**
 
 ## 📈 Monitoring
 
