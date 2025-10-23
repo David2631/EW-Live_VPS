@@ -190,7 +190,7 @@ class TradeExecutor:
                     volume=0, error_code=-1, error_message="MT5 not connected",
                     execution_time=datetime.now()
                 )
-            
+
             if not position_size.is_valid:
                 return ExecutionResult(
                     success=False, order_id=None, position_id=None, price=None,
@@ -198,7 +198,13 @@ class TradeExecutor:
                     execution_time=datetime.now()
                 )
             
-            # DYNAMIC PRICE VALIDATION - Auto-fix order parameters
+            # CHECK FOR EXISTING POSITIONS - Prevent duplicates
+            if self._has_existing_position(signal.symbol):
+                return ExecutionResult(
+                    success=False, order_id=None, position_id=None, price=None,
+                    volume=0, error_code=-2, error_message=f"Position already exists for {signal.symbol}",
+                    execution_time=datetime.now()
+                )            # DYNAMIC PRICE VALIDATION - Auto-fix order parameters
             self.logger.info(f"🔍 Validating {signal.symbol} order parameters...")
             validation = self.price_validator.validate_order(
                 symbol=signal.symbol,
@@ -523,8 +529,12 @@ class TradeExecutor:
     def _load_existing_positions(self):
         """Load existing MT5 positions into tracking"""
         try:
+            # Clear existing tracking first
+            self.active_positions.clear()
+            
             positions = mt5.positions_get()
             if positions:
+                loaded_count = 0
                 for pos in positions:
                     if pos.magic == self.magic_number:  # Only Elliott Wave positions
                         position = Position(
@@ -544,8 +554,12 @@ class TradeExecutor:
                             signal_confidence=0.0
                         )
                         self.active_positions[pos.ticket] = position
+                        loaded_count += 1
+                        self.logger.info(f"📍 Loaded position: {pos.symbol} {pos.volume} lots (ID: {pos.ticket})")
                 
-                self.logger.info(f"Loaded {len(self.active_positions)} existing Elliott Wave positions")
+                self.logger.info(f"Loaded {loaded_count} existing Elliott Wave positions")
+            else:
+                self.logger.info("No existing positions found")
                 
         except Exception as e:
             self.logger.error(f"Error loading existing positions: {e}")
@@ -669,14 +683,12 @@ class TradeExecutor:
             if symbol_info:
                 filling_mode = symbol_info.filling_mode
                 self.logger.error(f"   Available filling modes for {symbol}:")
-                self.logger.error(f"   Filling mode value: {filling_mode}")
                 
-                # Use numeric values instead of constants that may not exist
-                if filling_mode & 1:  # FOK
+                if filling_mode & mt5.SYMBOL_FILLING_FOK:
                     self.logger.error(f"   ✅ FOK (Fill or Kill)")
-                if filling_mode & 2:  # IOC  
+                if filling_mode & mt5.SYMBOL_FILLING_IOC:
                     self.logger.error(f"   ✅ IOC (Immediate or Cancel)")
-                if filling_mode & 4:  # RETURN
+                if filling_mode & mt5.SYMBOL_FILLING_RETURN:
                     self.logger.error(f"   ✅ RETURN (Return)")
                     
                 if filling_mode == 0:
@@ -699,16 +711,15 @@ class TradeExecutor:
                     execution_time=datetime.now()
                 )
             
-            # Try filling modes: RETURN, IOC, FOK
             filling_modes = [
-                (mt5.ORDER_FILLING_RETURN, "RETURN", 4),  # RETURN = 4
-                (mt5.ORDER_FILLING_IOC, "IOC", 2),        # IOC = 2  
-                (mt5.ORDER_FILLING_FOK, "FOK", 1)         # FOK = 1
+                (mt5.ORDER_FILLING_RETURN, "RETURN"),
+                (mt5.ORDER_FILLING_IOC, "IOC"), 
+                (mt5.ORDER_FILLING_FOK, "FOK")
             ]
             
-            for filling_mode, mode_name, bit_mask in filling_modes:
+            for filling_mode, mode_name in filling_modes:
                 # Check if this filling mode is supported
-                if not (symbol_info.filling_mode & bit_mask):
+                if not (symbol_info.filling_mode & (1 << (filling_mode - 1))):
                     self.logger.warning(f"   ⚠️ {mode_name} not supported for {symbol}")
                     continue
                 
@@ -743,6 +754,22 @@ class TradeExecutor:
                 error_message=f"Alternative filling error: {e}",
                 execution_time=datetime.now()
             )
+
+    def _has_existing_position(self, symbol: str) -> bool:
+        """Check if position already exists for this symbol"""
+        try:
+            # Get all current MT5 positions
+            positions = mt5.positions_get(symbol=symbol)
+            if positions:
+                # Check if any position has our magic number
+                for pos in positions:
+                    if pos.magic == self.magic_number:
+                        self.logger.info(f"🔄 {symbol}: Position already exists (ID: {pos.ticket}, Volume: {pos.volume})")
+                        return True
+            return False
+        except Exception as e:
+            self.logger.error(f"Error checking existing positions for {symbol}: {e}")
+            return False  # Assume no position on error to allow trading
 
 if __name__ == "__main__":
     # Test trade executor
