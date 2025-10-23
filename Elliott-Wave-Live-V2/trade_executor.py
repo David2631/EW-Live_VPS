@@ -739,7 +739,9 @@ class TradeExecutor:
                 volume=original_request['volume'], error_code=10030,
                 error_message=f"Alternative filling error: {e}",
                 execution_time=datetime.now()
-            )if __name__ == "__main__":
+            )
+
+if __name__ == "__main__":
     # Test trade executor
     logging.basicConfig(level=logging.INFO)
     

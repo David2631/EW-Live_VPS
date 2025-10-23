@@ -96,37 +96,34 @@ class DynamicPriceValidator:
         
         price_diff = abs(price1 - price2)
         
-        # Convert price difference to pips based on symbol's point size
-        if symbol_info.digits == 5 or symbol_info.digits == 3:
-            # 5-digit EUR/USD or 3-digit JPY pairs
-            pip_size = symbol_info.point * 10
+        # Handle different symbol types correctly
+        if symbol_info.symbol.startswith('US') or symbol_info.symbol in ['NAS100', 'UK100', 'DE40']:
+            # Indices: 1 pip = 1 point (regardless of digits)
+            pip_distance = price_diff
+        elif 'JPY' in symbol_info.symbol:
+            # JPY pairs: usually 3 digits, 1 pip = 0.01
+            pip_distance = price_diff * 100
+        elif symbol_info.symbol in ['XAUUSD', 'XAGUSD']:
+            # Metals: usually 2-3 digits, 1 pip = 0.1
+            pip_distance = price_diff * 10
         else:
-            # 4-digit EUR/USD or 2-digit JPY pairs  
-            pip_size = symbol_info.point
+            # Currency pairs: handle 4-digit vs 5-digit
+            if symbol_info.digits == 5:
+                # 5-digit pairs: 1 pip = 0.0001 (10 points)
+                pip_distance = price_diff * 10000
+            else:
+                # 4-digit pairs: 1 pip = 0.0001
+                pip_distance = price_diff * 10000
             
-        pip_distance = price_diff / pip_size
-        
         self.logger.debug(f"{symbol_info.symbol}: Price diff={price_diff:.5f}, "
-                         f"pip_size={pip_size:.5f}, distance={pip_distance:.1f} pips")
+                         f"digits={symbol_info.digits}, distance={pip_distance:.1f} pips")
         
         return pip_distance
     
     def get_minimum_distance(self, symbol_info: SymbolInfo) -> float:
         """Calculate minimum stop/TP distance in pips based on broker requirements"""
         
-        # Broker minimum distance (usually stops_level + spread + buffer)
-        broker_minimum = symbol_info.stops_level
-        spread_buffer = symbol_info.spread + 5  # 5 pip safety buffer
-        
-        # Convert to pips
-        if symbol_info.digits == 5 or symbol_info.digits == 3:
-            pip_size = symbol_info.point * 10
-        else:
-            pip_size = symbol_info.point
-            
-        min_distance_pips = max(broker_minimum, spread_buffer * 10) / pip_size
-        
-        # Conservative minimums per symbol type
+        # Conservative minimums per symbol type (in pips)
         conservative_minimums = {
             'JPY': 20,    # JPY pairs
             'METAL': 50,  # Gold/Silver  
@@ -139,10 +136,30 @@ class DynamicPriceValidator:
         symbol_type = self._get_symbol_type(symbol_info.symbol)
         conservative_min = conservative_minimums.get(symbol_type, 20)
         
-        final_minimum = max(min_distance_pips, conservative_min)
+        # Broker minimum (stops_level is usually in points, not pips)
+        broker_minimum_points = symbol_info.stops_level
+        spread_points = symbol_info.spread
         
-        self.logger.debug(f"{symbol_info.symbol}: broker_min={broker_minimum}, "
-                         f"spread_buffer={spread_buffer}, type={symbol_type}, "
+        # Convert broker minimums to pips based on symbol type
+        if symbol_type == 'INDEX':
+            # For indices, points = pips usually
+            broker_minimum_pips = broker_minimum_points + spread_points + 10
+        elif symbol_type == 'METAL':
+            # For metals, usually need more buffer
+            broker_minimum_pips = max(broker_minimum_points / 10, spread_points + 20)
+        else:
+            # For currency pairs
+            if symbol_info.digits == 5:
+                # 5-digit: 10 points = 1 pip
+                broker_minimum_pips = (broker_minimum_points + spread_points + 10) / 10
+            else:
+                # 4-digit: 1 point = 1 pip  
+                broker_minimum_pips = broker_minimum_points + spread_points + 5
+        
+        final_minimum = max(broker_minimum_pips, conservative_min)
+        
+        self.logger.debug(f"{symbol_info.symbol}: broker_min={broker_minimum_points}pts, "
+                         f"spread={spread_points}pts, type={symbol_type}, "
                          f"final_min={final_minimum:.1f} pips")
         
         return final_minimum
@@ -201,35 +218,23 @@ class DynamicPriceValidator:
             self.logger.warning(f"🔧 {symbol}: SL too close - {sl_distance:.1f} pips, "
                               f"adjusting to {min_distance:.1f} pips")
             
-            # Calculate pip size
-            if symbol_info.digits == 5 or symbol_info.digits == 3:
-                pip_size = symbol_info.point * 10
-            else:
-                pip_size = symbol_info.point
-                
             # Adjust stop loss to minimum distance
-            if stop_loss > entry_price:  # Short position
-                adjusted_sl = entry_price + (min_distance * pip_size)
-            else:  # Long position
-                adjusted_sl = entry_price - (min_distance * pip_size)
+            adjusted_sl = self._adjust_price_by_pips(
+                entry_price, min_distance, symbol_info, 
+                is_stop_loss=True, is_long=(stop_loss < entry_price)
+            )
         
-        # Validate and adjust take profit (with higher minimum for safety)
+        # Validate and adjust take profit
         min_tp_distance = min_distance
         if tp_distance < min_tp_distance:
             self.logger.warning(f"🔧 {symbol}: TP too close - {tp_distance:.1f} pips, "
                               f"adjusting to {min_tp_distance:.1f} pips")
             
-            # Calculate pip size
-            if symbol_info.digits == 5 or symbol_info.digits == 3:
-                pip_size = symbol_info.point * 10
-            else:
-                pip_size = symbol_info.point
-                
             # Adjust take profit to minimum distance
-            if take_profit > entry_price:  # Long position
-                adjusted_tp = entry_price + (min_tp_distance * pip_size)
-            else:  # Short position
-                adjusted_tp = entry_price - (min_tp_distance * pip_size)
+            adjusted_tp = self._adjust_price_by_pips(
+                entry_price, min_tp_distance, symbol_info,
+                is_stop_loss=False, is_long=(take_profit > entry_price)
+            )
         
         # Recalculate final distances
         final_sl_distance = self.calculate_pip_distance(entry_price, adjusted_sl, symbol_info)
@@ -260,3 +265,42 @@ class DynamicPriceValidator:
     def format_price(self, price: float, symbol_info: SymbolInfo) -> float:
         """Format price to correct decimal places for symbol"""
         return round(price, symbol_info.digits)
+    
+    def _adjust_price_by_pips(self, entry_price: float, pip_distance: float, 
+                             symbol_info: SymbolInfo, is_stop_loss: bool, is_long: bool) -> float:
+        """Adjust price by specified pip distance based on symbol type"""
+        
+        # Calculate price change based on symbol type
+        if symbol_info.symbol.startswith('US') or symbol_info.symbol in ['NAS100', 'UK100', 'DE40']:
+            # Indices: 1 pip = 1 point
+            price_change = pip_distance
+        elif 'JPY' in symbol_info.symbol:
+            # JPY pairs: 1 pip = 0.01
+            price_change = pip_distance * 0.01
+        elif symbol_info.symbol in ['XAUUSD', 'XAGUSD']:
+            # Metals: 1 pip = 0.1
+            price_change = pip_distance * 0.1
+        else:
+            # Currency pairs: 1 pip = 0.0001
+            price_change = pip_distance * 0.0001
+        
+        # Apply direction based on position type and SL/TP
+        if is_stop_loss:
+            # Stop loss is opposite direction to position
+            if is_long:
+                # Long position: SL below entry
+                adjusted_price = entry_price - price_change
+            else:
+                # Short position: SL above entry
+                adjusted_price = entry_price + price_change
+        else:
+            # Take profit is same direction as position
+            if is_long:
+                # Long position: TP above entry
+                adjusted_price = entry_price + price_change
+            else:
+                # Short position: TP below entry
+                adjusted_price = entry_price - price_change
+        
+        # Format to correct decimal places
+        return self.format_price(adjusted_price, symbol_info)
