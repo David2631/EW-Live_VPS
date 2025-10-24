@@ -1,6 +1,7 @@
 """
 Trade Executor - Professional MT5 Order Management
 Handles order execution, position management, and monitoring
+Integrated with dynamic price validation for broker-specific requirements
 """
 
 import MetaTrader5 as mt5
@@ -15,6 +16,7 @@ import time
 
 from signal_generator import TradingSignal, SignalType
 from risk_manager import PositionSize
+from price_validator import DynamicPriceValidator, ValidationResult
 
 class OrderType(Enum):
     """MT5 order types"""
@@ -85,6 +87,9 @@ class TradeExecutor:
         self.mt5_connected = False
         self.active_positions = {}  # position_id -> Position
         self.pending_orders = {}    # order_id -> order_info
+        
+        # Initialize dynamic price validator
+        self.price_validator = DynamicPriceValidator()
         
         # Execution settings
         self.max_slippage = 3.0     # Maximum slippage in pips
@@ -172,7 +177,7 @@ class TradeExecutor:
     
     def execute_signal(self, signal: TradingSignal, position_size: PositionSize) -> ExecutionResult:
         """
-        Execute trading signal with proper risk management
+        Execute trading signal with automatic price validation
         
         Args:
             signal: Trading signal from signal generator
@@ -185,13 +190,48 @@ class TradeExecutor:
                     volume=0, error_code=-1, error_message="MT5 not connected",
                     execution_time=datetime.now()
                 )
-            
+
             if not position_size.is_valid:
                 return ExecutionResult(
                     success=False, order_id=None, position_id=None, price=None,
                     volume=0, error_code=-1, error_message=f"Invalid position size: {position_size.reason}",
                     execution_time=datetime.now()
                 )
+            
+            # CHECK FOR EXISTING POSITIONS - Prevent duplicates
+            if self._has_existing_position(signal.symbol):
+                return ExecutionResult(
+                    success=False, order_id=None, position_id=None, price=None,
+                    volume=0, error_code=-2, error_message=f"Position already exists for {signal.symbol}",
+                    execution_time=datetime.now()
+                )            # DYNAMIC PRICE VALIDATION - Auto-fix order parameters
+            self.logger.info(f"🔍 Validating {signal.symbol} order parameters...")
+            validation = self.price_validator.validate_order(
+                symbol=signal.symbol,
+                entry_price=signal.entry_price,
+                stop_loss=signal.stop_loss,
+                take_profit=signal.take_profit
+            )
+            
+            if not validation.is_valid:
+                return ExecutionResult(
+                    success=False, order_id=None, position_id=None, price=None,
+                    volume=0, error_code=-1, error_message=f"Price validation failed: {validation.error_message}",
+                    execution_time=datetime.now()
+                )
+            
+            # Use validated/adjusted prices
+            validated_sl = validation.adjusted_sl
+            validated_tp = validation.adjusted_tp
+            
+            # Log adjustments if any were made
+            if validated_sl != signal.stop_loss:
+                self.logger.info(f"🔧 {signal.symbol}: Stop Loss adjusted from {signal.stop_loss:.5f} to {validated_sl:.5f} "
+                               f"({validation.pip_distance_sl:.1f} pips)")
+            
+            if validated_tp != signal.take_profit:
+                self.logger.info(f"🔧 {signal.symbol}: Take Profit adjusted from {signal.take_profit:.5f} to {validated_tp:.5f} "
+                               f"({validation.pip_distance_tp:.1f} pips)")
             
             # Prepare order request
             if signal.signal_type == SignalType.BUY:
@@ -207,24 +247,61 @@ class TradeExecutor:
                     execution_time=datetime.now()
                 )
             
-            # Create order request
-            request = {
-                "action": mt5.TRADE_ACTION_DEAL,
-                "symbol": signal.symbol,
-                "volume": position_size.lot_size,
-                "type": order_type,
-                "price": price,
-                "sl": signal.stop_loss,
-                "tp": signal.take_profit,
-                "deviation": int(self.max_slippage),
-                "magic": self.magic_number,
-                "comment": "EW_Signal",
-                "type_time": mt5.ORDER_TIME_GTC,
-                "type_filling": mt5.ORDER_FILLING_FOK,  # Fill or Kill - works with demo account
-            }
+            # Create order request with validated prices
+            # Use safe filling mode for older MT5 versions
+            safe_filling_mode = mt5.ORDER_FILLING_RETURN  # Most compatible mode
+            if hasattr(mt5, 'ORDER_FILLING_FOK'):
+                safe_filling_mode = mt5.ORDER_FILLING_FOK
+            
+            # For some brokers, stocks don't allow SL/TP at market order time
+            # Try without SL/TP first for stocks
+            symbol_info = mt5.symbol_info(signal.symbol)
+            is_stock = any(suffix in signal.symbol for suffix in ['.OQ', '.N', '.P', '.DE'])
+            
+            # Force no-stops mode for all stocks due to broker restrictions
+            if is_stock:
+                # Stocks: no SL/TP at order time
+                request = {
+                    "action": mt5.TRADE_ACTION_DEAL,
+                    "symbol": signal.symbol,
+                    "volume": position_size.lot_size,
+                    "type": order_type,
+                    "price": price,
+                    # No SL/TP for stocks
+                    "deviation": int(self.max_slippage),
+                    "magic": self.magic_number,
+                    "comment": "EW_Signal_NoStops",
+                    "type_time": mt5.ORDER_TIME_GTC,
+                    "type_filling": safe_filling_mode,
+                }
+                self.logger.info(f"📈 {signal.symbol}: Using market order without stops (broker restriction)")
+            else:
+                request = {
+                    "action": mt5.TRADE_ACTION_DEAL,
+                    "symbol": signal.symbol,
+                    "volume": position_size.lot_size,
+                    "type": order_type,
+                    "price": price,
+                    "sl": validated_sl,  # Use validated stop loss
+                    "tp": validated_tp,  # Use validated take profit
+                    "deviation": int(self.max_slippage),
+                    "magic": self.magic_number,
+                    "comment": "EW_Signal_Validated",
+                    "type_time": mt5.ORDER_TIME_GTC,
+                    "type_filling": safe_filling_mode,  # Safe filling mode
+                }
             
             # Execute order with retries
             result = self._execute_order_with_retry(request)
+            
+            # Special debugging for retcode 10030
+            if not result.success and result.error_code == 10030:
+                self.logger.error(f"🚨 RETCODE 10030 DEBUG for {signal.symbol}:")
+                self._debug_symbol_info(signal.symbol)
+                self._debug_order_filling_modes(signal.symbol)
+                
+                # Try alternative filling modes
+                result = self._retry_with_alternative_filling(request)
             
             if result.success:
                 # Track position
@@ -480,8 +557,12 @@ class TradeExecutor:
     def _load_existing_positions(self):
         """Load existing MT5 positions into tracking"""
         try:
+            # Clear existing tracking first
+            self.active_positions.clear()
+            
             positions = mt5.positions_get()
             if positions:
+                loaded_count = 0
                 for pos in positions:
                     if pos.magic == self.magic_number:  # Only Elliott Wave positions
                         position = Position(
@@ -501,8 +582,12 @@ class TradeExecutor:
                             signal_confidence=0.0
                         )
                         self.active_positions[pos.ticket] = position
+                        loaded_count += 1
+                        self.logger.info(f"📍 Loaded position: {pos.symbol} {pos.volume} lots (ID: {pos.ticket})")
                 
-                self.logger.info(f"Loaded {len(self.active_positions)} existing Elliott Wave positions")
+                self.logger.info(f"Loaded {loaded_count} existing Elliott Wave positions")
+            else:
+                self.logger.info("No existing positions found")
                 
         except Exception as e:
             self.logger.error(f"Error loading existing positions: {e}")
@@ -563,8 +648,185 @@ class TradeExecutor:
             mt5.TRADE_RETCODE_LIMIT_VOLUME: "Volume limit reached",
             mt5.TRADE_RETCODE_INVALID_ORDER: "Invalid order",
             mt5.TRADE_RETCODE_POSITION_CLOSED: "Position closed",
+            # Additional important codes
+            10004: "Requote",
+            10006: "Request rejected",
+            10007: "Request canceled by trader",
+            10008: "Order placed",
+            10009: "Request completed",
+            10010: "Request completed partially",
+            10011: "Request processing error",
+            10012: "Request canceled by timeout",
+            10013: "Invalid request",
+            10014: "Invalid volume in the request",
+            10015: "Invalid price in the request",
+            10016: "Invalid stops in the request",
+            10017: "Trade is disabled",
+            10018: "Market is closed",
+            10019: "There is not enough money to complete the request",
+            10020: "Prices changed",
+            10021: "There are no quotes to process the request",
+            10022: "Invalid order expiration date",
+            10023: "Order state changed",
+            10024: "Too frequent requests",
+            10025: "No changes in request",
+            10026: "Autotrading disabled by server",
+            10027: "Autotrading disabled by client terminal",
+            10028: "Request locked for processing",
+            10029: "Order or position frozen",
+            10030: "Invalid order filling type",  # THE PROBLEMATIC ONE!
+            10031: "No connection with the trade server",
+            10032: "Operation is allowed only for live accounts",
+            10033: "The number of pending orders has reached the limit",
+            10034: "The volume of orders and positions for the symbol has reached the limit",
+            10035: "Incorrect or prohibited order type",
+            10036: "Position with the specified POSITION_IDENTIFIER has already been closed",
         }
+        
         return retcode_descriptions.get(retcode, f"Unknown retcode: {retcode}")
+    
+    def _debug_symbol_info(self, symbol: str):
+        """Debug symbol information for retcode 10030 troubleshooting"""
+        try:
+            symbol_info = mt5.symbol_info(symbol)
+            if symbol_info:
+                self.logger.error(f"   Symbol: {symbol}")
+                self.logger.error(f"   Digits: {symbol_info.digits}")
+                self.logger.error(f"   Point: {symbol_info.point}")
+                self.logger.error(f"   Spread: {symbol_info.spread}")
+                self.logger.error(f"   Stops Level: {symbol_info.trade_stops_level}")
+                self.logger.info(f"   Trade Mode: {symbol_info.trade_mode}")
+                self.logger.info(f"   Filling Mode: {symbol_info.filling_mode}")
+                self.logger.info(f"   Expiration Mode: {symbol_info.expiration_mode}")
+                self.logger.info(f"   Min Volume: {symbol_info.volume_min}")
+                self.logger.info(f"   Max Volume: {symbol_info.volume_max}")
+                self.logger.info(f"   Volume Step: {symbol_info.volume_step}")
+        except Exception as e:
+            self.logger.error(f"   Error getting symbol info: {e}")
+    
+    def _debug_order_filling_modes(self, symbol: str):
+        """Debug available order filling modes"""
+        try:
+            symbol_info = mt5.symbol_info(symbol)
+            if symbol_info:
+                filling_mode = symbol_info.filling_mode
+                self.logger.info(f"   Available filling modes for {symbol}:")
+                
+                # Use safe attribute checks for older MT5 versions
+                if hasattr(mt5, 'SYMBOL_FILLING_FOK') and filling_mode & mt5.SYMBOL_FILLING_FOK:
+                    self.logger.info(f"   ✅ FOK (Fill or Kill)")
+                if hasattr(mt5, 'SYMBOL_FILLING_IOC') and filling_mode & mt5.SYMBOL_FILLING_IOC:
+                    self.logger.info(f"   ✅ IOC (Immediate or Cancel)")
+                if hasattr(mt5, 'SYMBOL_FILLING_RETURN') and filling_mode & mt5.SYMBOL_FILLING_RETURN:
+                    self.logger.info(f"   ✅ RETURN (Return)")
+                    
+                if filling_mode == 0:
+                    self.logger.warning(f"   ❌ No filling modes available!")
+                    
+        except Exception as e:
+            self.logger.error(f"   Error getting filling modes: {e}")
+    
+    def _retry_with_alternative_filling(self, original_request: Dict) -> ExecutionResult:
+        """Retry order with alternative filling modes for retcode 10030"""
+        symbol = original_request['symbol']
+        
+        # Skip problematic symbols that consistently fail
+        problematic_symbols = ['AXSUSD', 'SHIBUSDT', 'DOGEUSDT']
+        if symbol in problematic_symbols:
+            self.logger.warning(f"   ⚠️ {symbol} is known problematic symbol - skipping alternative retries")
+            return ExecutionResult(
+                success=False, order_id=None, position_id=None, price=None,
+                volume=original_request['volume'], error_code=10030,
+                error_message=f"{symbol} not supported by this broker",
+                execution_time=datetime.now()
+            )
+        
+        try:
+            symbol_info = mt5.symbol_info(symbol)
+            if not symbol_info:
+                return ExecutionResult(
+                    success=False, order_id=None, position_id=None, price=None,
+                    volume=original_request['volume'], error_code=10030,
+                    error_message="Cannot get symbol info for alternative filling",
+                    execution_time=datetime.now()
+                )
+            
+            # Safe filling modes with backward compatibility
+            filling_modes = []
+            if hasattr(mt5, 'ORDER_FILLING_RETURN'):
+                filling_modes.append((mt5.ORDER_FILLING_RETURN, "RETURN"))
+            if hasattr(mt5, 'ORDER_FILLING_IOC'):
+                filling_modes.append((mt5.ORDER_FILLING_IOC, "IOC"))
+            if hasattr(mt5, 'ORDER_FILLING_FOK'):
+                filling_modes.append((mt5.ORDER_FILLING_FOK, "FOK"))
+            
+            # Fallback for older MT5 versions
+            if not filling_modes:
+                self.logger.warning(f"   ⚠️ No modern filling modes available in this MT5 version")
+                return ExecutionResult(
+                    success=False, order_id=None, position_id=None, price=None,
+                    volume=original_request['volume'], error_code=10030,
+                    error_message="MT5 version too old for alternative filling modes",
+                    execution_time=datetime.now()
+                )
+            
+            for filling_mode, mode_name in filling_modes:
+                # Check if this filling mode is supported by symbol
+                try:
+                    if not (symbol_info.filling_mode & filling_mode):
+                        self.logger.warning(f"   ⚠️ {mode_name} not supported for {symbol}")
+                        continue
+                except:
+                    # Fallback for any bit operation issues
+                    pass
+                
+                self.logger.info(f"   🔄 Retrying {symbol} with {mode_name} filling mode...")
+                
+                # Create new request with different filling mode
+                retry_request = original_request.copy()
+                retry_request['type_filling'] = filling_mode
+                
+                # Execute with new filling mode
+                result = self._execute_order_with_retry(retry_request)
+                
+                if result.success:
+                    self.logger.info(f"   ✅ {symbol} successful with {mode_name} filling!")
+                    return result
+                else:
+                    self.logger.warning(f"   ❌ {symbol} failed with {mode_name}: {result.error_message}")
+            
+            # All filling modes failed
+            return ExecutionResult(
+                success=False, order_id=None, position_id=None, price=None,
+                volume=original_request['volume'], error_code=10030,
+                error_message="All alternative filling modes failed",
+                execution_time=datetime.now()
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Error in alternative filling retry: {e}")
+            return ExecutionResult(
+                success=False, order_id=None, position_id=None, price=None,
+                volume=original_request['volume'], error_code=10030,
+                error_message=f"Alternative filling error: {e}",
+                execution_time=datetime.now()
+            )
+
+    def _has_existing_position(self, symbol: str) -> bool:
+        """Check if position already exists for this symbol"""
+        try:
+            # Get all current MT5 positions
+            positions = mt5.positions_get(symbol=symbol)
+            if positions:
+                # Check if any position has our magic number
+                for pos in positions:
+                    if pos.magic == self.magic_number:
+                        self.logger.info(f"🔄 {symbol}: Position already exists (ID: {pos.ticket}, Volume: {pos.volume})")
+                        return True
+            return False
+        except Exception as e:
+            self.logger.error(f"Error checking existing positions for {symbol}: {e}")
+            return False  # Assume no position on error to allow trading
 
 if __name__ == "__main__":
     # Test trade executor

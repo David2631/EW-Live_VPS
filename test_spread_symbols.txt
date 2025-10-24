@@ -1,0 +1,9 @@
+# Test für Spread-Fixes
+EURUSD
+ADBE.OQ
+AKAM.OQ
+ALL.N
+BABA.N
+BKNG.OQ
+BTCUSD
+XLMUSD

@@ -12,6 +12,7 @@ import logging
 from datetime import datetime
 
 from elliott_wave_engine_original import ElliottWaveEngine, Dir, Impulse, ABC
+from symbol_manager import IntelligentSymbolManager
 
 class SignalType(Enum):
     """Trading signal types"""
@@ -94,6 +95,10 @@ class SignalGenerator:
     
     def __init__(self, config: Dict = None):
         self.logger = logging.getLogger(__name__)
+        
+        # Initialize Symbol Manager für intelligente Parameter
+        self.symbol_manager = IntelligentSymbolManager()
+        
         # Initialize Elliott Wave Engine with ORIGINAL backtest settings
         self.elliott_engine = ElliottWaveEngine({
             'PRIMARY_ZZ_PCT': 0.012,      # Original (restored)
@@ -114,9 +119,8 @@ class SignalGenerator:
         # Load configuration
         self.config = config or {}
         
-        # Signal configuration
+        # Signal configuration - WILL BE OVERRIDDEN per symbol by symbol_manager
         self.min_confidence = 70.0  # Minimum confidence for signal generation
-        self.max_spread_pips = 3.0  # Maximum spread for signal validity
         
         # Position tracking - CRITICAL: Prevent duplicate positions
         self.active_positions = set()  # Track symbols with open positions
@@ -163,24 +167,26 @@ class SignalGenerator:
             current_price: Current bid/ask prices
         """
         try:
+            self.logger.info(f"🔍 {symbol}: Starting signal generation analysis...")
+            
             if len(df) < 100:
                 self.logger.warning(f"{symbol}: Insufficient data for signal generation")
                 return None
             
             # CRITICAL: Check if position already exists for this symbol
             if symbol in self.active_positions:
-                self.logger.debug(f"{symbol}: Position already active - skipping signal generation")
+                self.logger.info(f"{symbol}: Position already active - skipping signal generation")
                 return None
             
-            # Check spread conditions
+            # Check spread conditions - INTELLIGENT per Symbol
             spread_pips = self._calculate_spread_pips(current_price, symbol)
-            if spread_pips > self.max_spread_pips:
-                self.logger.debug(f"{symbol}: Spread too wide ({spread_pips:.1f} pips)")
+            if not self._is_spread_acceptable_intelligent(spread_pips, symbol):
                 return None
             
             # Run Elliott Wave analysis
             wave_analysis = self.elliott_engine.analyze_waves(df)
             if not wave_analysis:
+                self.logger.info(f"{symbol}: No Elliott Wave patterns found")
                 return None
             
             # Extract wave patterns
@@ -297,8 +303,8 @@ class SignalGenerator:
             
             # Calculate metrics
             # Validate stop loss and take profit meet broker requirements
-            stop_loss = self._validate_stop_loss(entry_price, stop_loss, symbol)
-            take_profit = self._validate_take_profit(entry_price, take_profit, symbol)
+            stop_loss = self._validate_stop_loss_intelligent(entry_price, stop_loss, symbol)
+            take_profit = self._validate_take_profit_intelligent(entry_price, take_profit, symbol)
             
             stop_pips = self._calculate_pips(entry_price, stop_loss, symbol)
             tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
@@ -359,8 +365,8 @@ class SignalGenerator:
                         take_profit = wave3_price * 1.618  # Wave 5 target (1.618 extension)
                         
                         # Validate stop loss and take profit meet broker requirements
-                        stop_loss = self._validate_stop_loss(entry_price, stop_loss, symbol)
-                        take_profit = self._validate_take_profit(entry_price, take_profit, symbol)
+                        stop_loss = self._validate_stop_loss_intelligent(entry_price, stop_loss, symbol)
+                        take_profit = self._validate_take_profit_intelligent(entry_price, take_profit, symbol)
                         
                         stop_pips = self._calculate_pips(entry_price, stop_loss, symbol)
                         tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
@@ -402,8 +408,8 @@ class SignalGenerator:
                         take_profit = wave3_price * 0.382  # Wave 5 target
                         
                         # Validate stop loss and take profit meet broker requirements
-                        stop_loss = self._validate_stop_loss(entry_price, stop_loss, symbol)
-                        take_profit = self._validate_take_profit(entry_price, take_profit, symbol)
+                        stop_loss = self._validate_stop_loss_intelligent(entry_price, stop_loss, symbol)
+                        take_profit = self._validate_take_profit_intelligent(entry_price, take_profit, symbol)
                         
                         stop_pips = self._calculate_pips(entry_price, stop_loss, symbol)
                         tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
@@ -468,8 +474,8 @@ class SignalGenerator:
                         take_profit = a_price * 0.9  # Below A wave
                     
                     # Validate stop loss and take profit meet broker requirements
-                    stop_loss = self._validate_stop_loss(entry_price, stop_loss, symbol)
-                    take_profit = self._validate_take_profit(entry_price, take_profit, symbol)
+                    stop_loss = self._validate_stop_loss_intelligent(entry_price, stop_loss, symbol)
+                    take_profit = self._validate_take_profit_intelligent(entry_price, take_profit, symbol)
                     
                     stop_pips = self._calculate_pips(entry_price, stop_loss, symbol)
                     tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
@@ -527,98 +533,91 @@ class SignalGenerator:
         spread = current_price['spread']
         return self._calculate_pips(current_price['ask'], current_price['bid'], symbol)
     
-    def _validate_stop_loss(self, entry_price: float, stop_loss: float, symbol: str) -> float:
-        """Validate and adjust stop loss to meet broker requirements"""
-        
-        # Calculate minimum stop distance (maximum conservative for strict brokers)
-        min_stop_pips = {
-            'EURUSD': 60, 'GBPUSD': 120, 'AUDUSD': 100, 'NZDUSD': 60,
-            'USDCHF': 60, 'USDCAD': 80, 'USDJPY': 50,
-            'XAUUSD': 200, 'XAGUSD': 120,  # Metals need larger stops
-            'US30': 300, 'NAS100': 200, 'UK100': 200, 'DE40': 150,  # Indices
-            'default': 80
-        }
-        
-        # Get minimum stop for this symbol
-        min_pips = min_stop_pips.get(symbol, min_stop_pips['default'])
-        
-        # Add spread buffer (some brokers require stop > spread + minimum)
-        spread_buffer = 10  # Extra 10 pips buffer for strict brokers
-        total_min_pips = min_pips + spread_buffer
-        
-        # Calculate current stop distance in pips  
-        current_stop_pips = self._calculate_pips(entry_price, stop_loss, symbol)
-        
-        # If stop is too small, adjust it
-        if current_stop_pips < total_min_pips:
-            # Adjust stop loss to minimum distance
-            if stop_loss > entry_price:  # Stop above entry (short position)
-                stop_loss = entry_price + (total_min_pips / self._get_pip_factor(symbol))
-            else:  # Stop below entry (long position)  
-                stop_loss = entry_price - (total_min_pips / self._get_pip_factor(symbol))
-                
-            self.logger.info(f"{symbol}: Adjusted stop loss from {current_stop_pips:.1f} to {total_min_pips} pips (min: {min_pips} + buffer: {spread_buffer})")
-        
-        return stop_loss
+    def _is_spread_acceptable_intelligent(self, spread_pips: float, symbol: str) -> bool:
+        """Intelligent spread validation using Symbol Manager"""
+        try:
+            symbol_params = self.symbol_manager.get_symbol_parameters(symbol)
+            max_spread = symbol_params.max_spread_pips
+            
+            is_acceptable = spread_pips <= max_spread
+            
+            if not is_acceptable:
+                self.logger.info(f"{symbol}: Spread too wide ({spread_pips:.1f} pips > {max_spread:.1f} pips) "
+                               f"[{symbol_params.symbol_type}]")
+            else:
+                self.logger.debug(f"{symbol}: Spread OK ({spread_pips:.1f} pips ≤ {max_spread:.1f} pips) "
+                                f"[{symbol_params.symbol_type}]")
+            
+            return is_acceptable
+            
+        except Exception as e:
+            self.logger.error(f"{symbol}: Error checking spread: {e}")
+            return spread_pips <= 50.0  # Fallback
     
-    def _validate_take_profit(self, entry_price: float, take_profit: float, symbol: str) -> float:
-        """Validate and adjust take profit to meet broker requirements"""
-        
-        # Same minimum distance requirements as stop loss (extra conservative for strict brokers)
-        min_tp_pips = {
-            'EURUSD': 60, 'GBPUSD': 120, 'AUDUSD': 100, 'NZDUSD': 60,
-            'USDCHF': 60, 'USDCAD': 80, 'USDJPY': 50,
-            'XAUUSD': 200, 'XAGUSD': 120,  # Metals need larger distances
-            'US30': 300, 'NAS100': 200, 'UK100': 200, 'DE40': 150,  # Indices
-            'default': 80
-        }
-        
-        # Get minimum TP distance for this symbol
-        min_pips = min_tp_pips.get(symbol, min_tp_pips['default'])
-        
-        # Add spread buffer
-        spread_buffer = 10  # Extra 10 pips buffer for strict brokers
-        total_min_pips = min_pips + spread_buffer
-        
-        # Calculate current TP distance in pips
-        current_tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
-        
-        # Maximum reasonable take profit distances (broker-friendly)
-        max_tp_pips = {
-            'EURUSD': 300, 'GBPUSD': 350, 'AUDUSD': 300, 'NZDUSD': 250,
-            'USDCHF': 300, 'USDCAD': 350, 'USDJPY': 300,
-            'XAUUSD': 1000, 'XAGUSD': 500,  # Metals can have larger moves
-            'US30': 1500, 'NAS100': 800, 'UK100': 600, 'DE40': 500,  # Indices
-            'default': 400
-        }
-        
-        max_pips = max_tp_pips.get(symbol, max_tp_pips['default'])
-        
-        # Debug logging
-        self.logger.info(f"{symbol}: TP Check - Current: {current_tp_pips:.1f} pips, Required: {total_min_pips} pips, Max: {max_pips} pips")
-        
-        # Cap take profit at maximum reasonable distance
-        if current_tp_pips > max_pips:
-            if take_profit > entry_price:  # TP above entry (long position)
-                take_profit = entry_price + (max_pips / self._get_pip_factor(symbol))
-            else:  # TP below entry (short position)  
-                take_profit = entry_price - (max_pips / self._get_pip_factor(symbol))
-            self.logger.info(f"{symbol}: Capped take profit from {current_tp_pips:.1f} to {max_pips} pips (max allowed)")
-            current_tp_pips = max_pips
-        
-        # If TP is too small, adjust it
-        if current_tp_pips < total_min_pips:
-            # Adjust take profit to minimum distance
-            if take_profit > entry_price:  # TP above entry (long position)
-                take_profit = entry_price + (total_min_pips / self._get_pip_factor(symbol))
-            else:  # TP below entry (short position)  
-                take_profit = entry_price - (total_min_pips / self._get_pip_factor(symbol))
-                
-            self.logger.info(f"{symbol}: Adjusted take profit from {current_tp_pips:.1f} to {total_min_pips} pips (min: {min_pips} + buffer: {spread_buffer})")
-        else:
-            self.logger.info(f"{symbol}: Take profit OK at {current_tp_pips:.1f} pips")
-        
-        return take_profit
+    def _validate_stop_loss_intelligent(self, entry_price: float, stop_loss: float, symbol: str) -> float:
+        """Intelligent stop loss validation using Symbol Manager"""
+        try:
+            symbol_params = self.symbol_manager.get_symbol_parameters(symbol)
+            min_sl_pips = symbol_params.min_sl_pips
+            
+            # Calculate current stop distance in pips  
+            current_stop_pips = self._calculate_pips(entry_price, stop_loss, symbol)
+            
+            # If stop is too small, adjust it
+            if current_stop_pips < min_sl_pips:
+                # Adjust stop loss to minimum distance
+                if stop_loss > entry_price:  # Stop above entry (short position)
+                    stop_loss = entry_price + (min_sl_pips / self._get_pip_factor(symbol))
+                else:  # Stop below entry (long position)  
+                    stop_loss = entry_price - (min_sl_pips / self._get_pip_factor(symbol))
+                    
+                self.logger.info(f"{symbol}: Adjusted stop loss from {current_stop_pips:.1f} to {min_sl_pips:.1f} pips "
+                               f"(min for {symbol_params.symbol_type})")
+            
+            return stop_loss
+            
+        except Exception as e:
+            self.logger.error(f"{symbol}: Error validating stop loss: {e}")
+            return stop_loss  # Return original if error
+    
+    def _validate_take_profit_intelligent(self, entry_price: float, take_profit: float, symbol: str) -> float:
+        """Intelligent take profit validation using Symbol Manager"""
+        try:
+            symbol_params = self.symbol_manager.get_symbol_parameters(symbol)
+            min_tp_pips = symbol_params.min_tp_pips
+            max_tp_pips = symbol_params.max_tp_pips
+            
+            # Calculate current TP distance in pips
+            current_tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
+            
+            # Check if TP is too small
+            if current_tp_pips < min_tp_pips:
+                # Adjust TP to minimum distance
+                if take_profit > entry_price:  # TP above entry (long position)
+                    take_profit = entry_price + (min_tp_pips / self._get_pip_factor(symbol))
+                else:  # TP below entry (short position)
+                    take_profit = entry_price - (min_tp_pips / self._get_pip_factor(symbol))
+                    
+                self.logger.info(f"{symbol}: Adjusted take profit from {current_tp_pips:.1f} to {min_tp_pips:.1f} pips "
+                               f"(min for {symbol_params.symbol_type})")
+                current_tp_pips = min_tp_pips
+            
+            # Check if TP is too large
+            if current_tp_pips > max_tp_pips:
+                # Cap TP to maximum distance
+                if take_profit > entry_price:  # TP above entry (long position)
+                    take_profit = entry_price + (max_tp_pips / self._get_pip_factor(symbol))
+                else:  # TP below entry (short position)
+                    take_profit = entry_price - (max_tp_pips / self._get_pip_factor(symbol))
+                    
+                self.logger.info(f"{symbol}: Capped take profit from {current_tp_pips:.1f} to {max_tp_pips:.1f} pips "
+                               f"(max for {symbol_params.symbol_type})")
+            
+            return take_profit
+            
+        except Exception as e:
+            self.logger.error(f"{symbol}: Error validating take profit: {e}")
+            return take_profit  # Return original if error
     
     def _get_pip_factor(self, symbol: str) -> float:
         """Get pip factor for symbol"""

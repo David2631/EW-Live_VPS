@@ -92,11 +92,11 @@ class RiskManager:
             take_profit_pips = abs(take_profit_price - entry_price) / pip_factor
             
             # Calculate pip value
-            if symbol_info['currency_profit'] == 'USD':
-                pip_value = symbol_info['trade_tick_value'] / symbol_info['trade_tick_size'] * pip_factor
+            if symbol_info.get('currency_profit') == 'USD':
+                pip_value = symbol_info.get('trade_tick_value', 1) / symbol_info.get('trade_tick_size', 0.00001) * pip_factor
             else:
                 # Simplified calculation - would need USD conversion rate in real system
-                pip_value = pip_factor * symbol_info['contract_size'] / 100000
+                pip_value = pip_factor * symbol_info.get('trade_contract_size', 100000) / 100000
             
             # Calculate reward-to-risk ratio
             if stop_loss_pips > 0:
@@ -115,13 +115,25 @@ class RiskManager:
                 lot_size = max_risk_amount / (stop_loss_pips * pip_value)
                 
                 # Apply symbol constraints
-                min_lot = symbol_info['volume_min']
-                max_lot = symbol_info['volume_max']
-                lot_step = symbol_info['volume_step']
+                min_lot = symbol_info.get('volume_min', 0.01)
+                max_lot = symbol_info.get('volume_max', 100.0)
+                lot_step = symbol_info.get('volume_step', 0.01)
                 
                 # Round to valid lot size
                 lot_size = max(min_lot, min(max_lot, lot_size))
                 lot_size = round(lot_size / lot_step) * lot_step
+                
+                # Intelligent balance check - auto-reduce if insufficient funds
+                margin_required = self._estimate_margin_required(symbol, lot_size, entry_price, symbol_info)
+                available_margin = account_balance * 0.8  # Use 80% of balance for safety
+                
+                if margin_required > available_margin:
+                    # Auto-reduce position size to fit available margin
+                    reduction_factor = available_margin / margin_required
+                    lot_size = lot_size * reduction_factor
+                    lot_size = max(min_lot, min(max_lot, lot_size))
+                    lot_size = round(lot_size / lot_step) * lot_step
+                    self.logger.warning(f"💰 {symbol}: Auto-reduced position from calculated to {lot_size:.3f} lots (balance constraint)")
                 
                 # Final risk amount with actual lot size
                 actual_risk = lot_size * stop_loss_pips * pip_value
@@ -134,7 +146,8 @@ class RiskManager:
                     take_profit_pips=take_profit_pips,
                     reward_risk_ratio=reward_risk_ratio,
                     pip_value=pip_value,
-                    is_valid=True
+                    is_valid=True,
+                    reason=f"Balance-adjusted position: {lot_size:.3f} lots"
                 )
             else:
                 return PositionSize(symbol, 0, 0, 0, 0, 0, 0, False, "Invalid pip value calculation")
@@ -178,6 +191,33 @@ class RiskManager:
                     correlation_risk += position.risk_amount * correlation
         
         return correlation_risk
+    
+    def _estimate_margin_required(self, symbol: str, lot_size: float, entry_price: float, symbol_info: Dict) -> float:
+        """Estimate margin required for position (simplified calculation)"""
+        try:
+            # Basic margin calculation - this is simplified
+            # In reality, you'd want to use MT5's margin calculation
+            contract_size = symbol_info.get('trade_contract_size', 100000)
+            
+            # Estimate leverage based on symbol type
+            if symbol.startswith('US') or symbol in ['NAS100', 'SPX500']:
+                leverage = 20  # Indices typically lower leverage
+            elif any(suffix in symbol for suffix in ['.OQ', '.N', '.P', '.DE']):
+                leverage = 5   # Stocks typically lower leverage
+            elif 'JPY' in symbol:
+                leverage = 100  # Major pairs
+            else:
+                leverage = 50   # Default forex leverage
+            
+            notional_value = lot_size * contract_size * entry_price
+            margin_required = notional_value / leverage
+            
+            return margin_required
+            
+        except Exception as e:
+            self.logger.warning(f"Margin estimation error for {symbol}: {e}")
+            # Conservative fallback
+            return lot_size * 1000  # Rough estimate
     
     def _check_consecutive_losses(self) -> bool:
         """Check if maximum consecutive losses reached"""
