@@ -16,7 +16,7 @@
     30
   ],
   
-  "scan_interval": 60,
+  "scan_interval": 120,
   "account_balance": 1000,
   
   "risk_parameters": {

@@ -1,0 +1,173 @@
+{
+  "timestamp": "2025-10-23T22:13:34.139446",
+  "test_type": "EXOTIC_vs_CACHED_symbols",
+  "symbols_tested": {
+    "EURUSD": {
+      "symbol": "EURUSD",
+      "category": "MAJOR_FOREX_CACHED",
+      "attempts": [
+        {
+          "attempt": 1,
+          "fetch_time_seconds": 0.140282,
+          "data_points": 50,
+          "success": true,
+          "latest_price": 1.16149
+        },
+        {
+          "attempt": 2,
+          "fetch_time_seconds": 0.009266,
+          "data_points": 50,
+          "success": true,
+          "latest_price": 1.16149
+        },
+        {
+          "attempt": 3,
+          "fetch_time_seconds": 0.01986,
+          "data_points": 50,
+          "success": true,
+          "latest_price": 1.16149
+        }
+      ],
+      "avg_fetch_time": 0.056469,
+      "data_quality": "GOOD",
+      "mt5_status": "CONNECTED"
+    },
+    "GBPUSD": {
+      "symbol": "GBPUSD",
+      "category": "MAJOR_FOREX_CACHED",
+      "attempts": [
+        {
+          "attempt": 1,
+          "fetch_time_seconds": 0.25339,
+          "data_points": 50,
+          "success": true,
+          "latest_price": 1.33222
+        },
+        {
+          "attempt": 2,
+          "fetch_time_seconds": 0.021058,
+          "data_points": 50,
+          "success": true,
+          "latest_price": 1.33222
+        },
+        {
+          "attempt": 3,
+          "fetch_time_seconds": 0.013425,
+          "data_points": 50,
+          "success": true,
+          "latest_price": 1.33222
+        }
+      ],
+      "avg_fetch_time": 0.095958,
+      "data_quality": "GOOD",
+      "mt5_status": "CONNECTED"
+    },
+    "BMWG.DE": {
+      "symbol": "BMWG.DE",
+      "category": "GERMAN_STOCKS_EXOTIC",
+      "attempts": [
+        {
+          "attempt": 1,
+          "fetch_time_seconds": 0.218324,
+          "data_points": 50,
+          "success": true,
+          "latest_price": 80.61
+        },
+        {
+          "attempt": 2,
+          "fetch_time_seconds": 0.021993,
+          "data_points": 50,
+          "success": true,
+          "latest_price": 80.61
+        },
+        {
+          "attempt": 3,
+          "fetch_time_seconds": 0.009466,
+          "data_points": 50,
+          "success": true,
+          "latest_price": 80.61
+        }
+      ],
+      "avg_fetch_time": 0.083261,
+      "data_quality": "GOOD",
+      "mt5_status": "CONNECTED"
+    },
+    "DAIGn.DE": {
+      "symbol": "DAIGn.DE",
+      "category": "GERMAN_STOCKS_EXOTIC",
+      "attempts": [
+        {
+          "attempt": 1,
+          "fetch_time_seconds": 0.393891,
+          "data_points": 50,
+          "success": true,
+          "latest_price": 53.24
+        },
+        {
+          "attempt": 2,
+          "fetch_time_seconds": 0.021203,
+          "data_points": 50,
+          "success": true,
+          "latest_price": 53.24
+        },
+        {
+          "attempt": 3,
+          "fetch_time_seconds": 0.011169,
+          "data_points": 50,
+          "success": true,
+          "latest_price": 53.24
+        }
+      ],
+      "avg_fetch_time": 0.142088,
+      "data_quality": "GOOD",
+      "mt5_status": "CONNECTED"
+    },
+    "BTCUSD": {
+      "symbol": "BTCUSD",
+      "category": "CRYPTO_VERY_EXOTIC",
+      "attempts": [
+        {
+          "attempt": 1,
+          "fetch_time_seconds": 0.533889,
+          "data_points": 50,
+          "success": true,
+          "latest_price": 109825.01
+        },
+        {
+          "attempt": 2,
+          "fetch_time_seconds": 0.019882,
+          "data_points": 50,
+          "success": true,
+          "latest_price": 109829.01
+        },
+        {
+          "attempt": 3,
+          "fetch_time_seconds": 0.010225,
+          "data_points": 50,
+          "success": true,
+          "latest_price": 109823.01
+        }
+      ],
+      "avg_fetch_time": 0.187999,
+      "data_quality": "GOOD",
+      "mt5_status": "CONNECTED"
+    }
+  },
+  "summary": {
+    "MAJOR_FOREX_CACHED": {
+      "success_rate": "2/2",
+      "avg_fetch_time": 0.076214,
+      "symbols_count": 2
+    },
+    "GERMAN_STOCKS_EXOTIC": {
+      "success_rate": "2/2",
+      "avg_fetch_time": 0.112674,
+      "symbols_count": 2
+    },
+    "CRYPTO_VERY_EXOTIC": {
+      "success_rate": "1/1",
+      "avg_fetch_time": 0.187999,
+      "symbols_count": 1
+    }
+  }
+}

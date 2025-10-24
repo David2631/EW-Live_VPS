@@ -1,0 +1,142 @@
+{
+  "timestamp": "2025-10-23T22:13:03.417658",
+  "test_type": "EXOTIC_vs_CACHED_symbols",
+  "symbols_tested": {
+    "EURUSD": {
+      "symbol": "EURUSD",
+      "category": "MAJOR_FOREX_CACHED",
+      "attempts": [
+        {
+          "attempt": 1,
+          "fetch_time_seconds": 1.3e-05,
+          "success": false,
+          "error": "MarketDataManager.get_live_data() missing 1 required positional argument: 'timeframe'"
+        },
+        {
+          "attempt": 2,
+          "fetch_time_seconds": 2.3e-05,
+          "success": false,
+          "error": "MarketDataManager.get_live_data() missing 1 required positional argument: 'timeframe'"
+        },
+        {
+          "attempt": 3,
+          "fetch_time_seconds": 2e-05,
+          "success": false,
+          "error": "MarketDataManager.get_live_data() missing 1 required positional argument: 'timeframe'"
+        }
+      ],
+      "avg_fetch_time": 0,
+      "data_quality": "FAILED",
+      "mt5_status": "FAILED"
+    },
+    "GBPUSD": {
+      "symbol": "GBPUSD",
+      "category": "MAJOR_FOREX_CACHED",
+      "attempts": [
+        {
+          "attempt": 1,
+          "fetch_time_seconds": 1.8e-05,
+          "success": false,
+          "error": "MarketDataManager.get_live_data() missing 1 required positional argument: 'timeframe'"
+        },
+        {
+          "attempt": 2,
+          "fetch_time_seconds": 2.2e-05,
+          "success": false,
+          "error": "MarketDataManager.get_live_data() missing 1 required positional argument: 'timeframe'"
+        },
+        {
+          "attempt": 3,
+          "fetch_time_seconds": 2.6e-05,
+          "success": false,
+          "error": "MarketDataManager.get_live_data() missing 1 required positional argument: 'timeframe'"
+        }
+      ],
+      "avg_fetch_time": 0,
+      "data_quality": "FAILED",
+      "mt5_status": "FAILED"
+    },
+    "BMWG.DE": {
+      "symbol": "BMWG.DE",
+      "category": "GERMAN_STOCKS_EXOTIC",
+      "attempts": [
+        {
+          "attempt": 1,
+          "fetch_time_seconds": 1.1e-05,
+          "success": false,
+          "error": "MarketDataManager.get_live_data() missing 1 required positional argument: 'timeframe'"
+        },
+        {
+          "attempt": 2,
+          "fetch_time_seconds": 2.2e-05,
+          "success": false,
+          "error": "MarketDataManager.get_live_data() missing 1 required positional argument: 'timeframe'"
+        },
+        {
+          "attempt": 3,
+          "fetch_time_seconds": 2e-05,
+          "success": false,
+          "error": "MarketDataManager.get_live_data() missing 1 required positional argument: 'timeframe'"
+        }
+      ],
+      "avg_fetch_time": 0,
+      "data_quality": "FAILED",
+      "mt5_status": "FAILED"
+    },
+    "DAIGn.DE": {
+      "symbol": "DAIGn.DE",
+      "category": "GERMAN_STOCKS_EXOTIC",
+      "attempts": [
+        {
+          "attempt": 1,
+          "fetch_time_seconds": 2.8e-05,
+          "success": false,
+          "error": "MarketDataManager.get_live_data() missing 1 required positional argument: 'timeframe'"
+        },
+        {
+          "attempt": 2,
+          "fetch_time_seconds": 4.4e-05,
+          "success": false,
+          "error": "MarketDataManager.get_live_data() missing 1 required positional argument: 'timeframe'"
+        },
+        {
+          "attempt": 3,
+          "fetch_time_seconds": 2.4e-05,
+          "success": false,
+          "error": "MarketDataManager.get_live_data() missing 1 required positional argument: 'timeframe'"
+        }
+      ],
+      "avg_fetch_time": 0,
+      "data_quality": "FAILED",
+      "mt5_status": "FAILED"
+    },
+    "BTCUSD": {
+      "symbol": "BTCUSD",
+      "category": "CRYPTO_VERY_EXOTIC",
+      "attempts": [
+        {
+          "attempt": 1,
+          "fetch_time_seconds": 1.9e-05,
+          "success": false,
+          "error": "MarketDataManager.get_live_data() missing 1 required positional argument: 'timeframe'"
+        },
+        {
+          "attempt": 2,
+          "fetch_time_seconds": 3.9e-05,
+          "success": false,
+          "error": "MarketDataManager.get_live_data() missing 1 required positional argument: 'timeframe'"
+        },
+        {
+          "attempt": 3,
+          "fetch_time_seconds": 2.3e-05,
+          "success": false,
+          "error": "MarketDataManager.get_live_data() missing 1 required positional argument: 'timeframe'"
+        }
+      ],
+      "avg_fetch_time": 0,
+      "data_quality": "FAILED",
+      "mt5_status": "FAILED"
+    }
+  },
+  "summary": {}
+}

@@ -93,7 +93,7 @@ class ElliottWaveTradingEngine:
             return {
                 'symbols': ['EURUSD', 'XAUUSD', 'US30', 'NAS100', 'US500.f', 'AUDNOK'],
                 'timeframes': [mt5.TIMEFRAME_M30],
-                'scan_interval': 60,
+                'scan_interval': 120,
                 'account_balance': 10000,
                 'risk_parameters': {
                     'max_risk_per_trade': 0.01,
@@ -167,9 +167,10 @@ class ElliottWaveTradingEngine:
             for symbol in valid_symbols:
                 self.last_analysis_time[symbol] = datetime.min
             
-            self.logger.info(f"Elliott Wave Trading Engine V2 initialized successfully")
+            self.logger.info(f"Elliott Wave Trading Engine V2 - Candle Close Timing Edition initialized successfully")
+            self.logger.info(f"📊 Complete symbol scan + candle close timing (xx:x1:05) enabled")
             self.logger.info(f"Symbols: {', '.join(valid_symbols)}")
-            self.logger.info(f"Scan interval: {self.config['scan_interval']}s")
+            self.logger.info(f"Timeframes: {self.config['timeframes']}")
             
             return True
             
@@ -211,7 +212,7 @@ class ElliottWaveTradingEngine:
             self.logger.info("Elliott Wave Trading Engine V2 stopped")
     
     def _analysis_loop(self):
-        """Main analysis loop - runs in separate thread"""
+        """Main analysis loop - waits for candle close timing (xx:x1:05)"""
         while self.is_running and not self.stop_event.is_set():
             try:
                 # Check trading hours
@@ -219,22 +220,53 @@ class ElliottWaveTradingEngine:
                     time.sleep(60)  # Check every minute during off-hours
                     continue
                 
-                # Analyze each symbol
+                # Complete symbol scan
+                scan_start = time.time()
+                self.logger.info(f"🔄 Starting complete scan of all {len(self.config['symbols'])} symbols...")
+                
+                symbols_processed = 0
                 for symbol in self.config['symbols']:
                     if self.stop_event.is_set():
                         break
                     
                     try:
                         self._analyze_symbol(symbol)
+                        symbols_processed += 1
                     except Exception as e:
                         self.logger.error(f"Error analyzing {symbol}: {e}")
                 
-                # Wait for next scan
-                time.sleep(self.config['scan_interval'])
+                scan_duration = time.time() - scan_start
+                self.logger.info(f"✅ Completed scan: {symbols_processed} symbols in {scan_duration:.1f}s")
+                
+                # Wait for next candle close (xx:x1:05)
+                self._wait_for_candle_close()
                 
             except Exception as e:
                 self.logger.error(f"Analysis loop error: {e}")
                 time.sleep(10)  # Short pause on error
+    
+    def _wait_for_candle_close(self):
+        """Wait until 5 seconds after the next minute starts (candle close + buffer)"""
+        import datetime
+        
+        now = datetime.datetime.now()
+        
+        # Calculate next minute at :05 seconds
+        next_minute = now.replace(second=0, microsecond=0) + datetime.timedelta(minutes=1)
+        target_time = next_minute.replace(second=5)  # Wait until :05 seconds
+        
+        # Calculate wait time
+        wait_seconds = (target_time - now).total_seconds()
+        
+        if wait_seconds > 0:
+            self.logger.info(f"⏰ Waiting {wait_seconds:.1f}s for next candle close (until {target_time.strftime('%H:%M:%S')})")
+            time.sleep(wait_seconds)
+        else:
+            # We're already past the target, wait for next cycle
+            target_time += datetime.timedelta(minutes=1)
+            wait_seconds = (target_time - datetime.datetime.now()).total_seconds()
+            self.logger.info(f"⏰ Waiting {wait_seconds:.1f}s for next candle close (until {target_time.strftime('%H:%M:%S')})")
+            time.sleep(wait_seconds)
     
     def _analyze_symbol(self, symbol: str):
         """Analyze single symbol for Elliott Wave patterns"""
@@ -245,9 +277,13 @@ class ElliottWaveTradingEngine:
                 return  # Too soon since last analysis
             
             # Get market data
+            self.logger.debug(f"📊 {symbol}: Fetching market data...")
             df = self.market_data.get_live_data(symbol, mt5.TIMEFRAME_M30, 200)
             if df is None or not self.market_data.validate_data_quality(df, symbol):
+                self.logger.warning(f"❌ {symbol}: No valid data available")
                 return
+            else:
+                self.logger.debug(f"✅ {symbol}: Got {len(df)} bars of data")
             
             # Get current price
             current_price = self.market_data.get_current_price(symbol)

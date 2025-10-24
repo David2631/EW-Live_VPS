@@ -510,15 +510,17 @@ class SignalGenerator:
         return None
     
     def _calculate_pips(self, price1: float, price2: float, symbol: str) -> float:
-        """Calculate pip difference between two prices"""
+        """Calculate pip difference between two prices (always returns positive distance)"""
         if 'JPY' in symbol:
-            return (price1 - price2) * 100
-        elif symbol in ['XAUUSD']:
-            return (price1 - price2) * 10
-        elif symbol.startswith('US') or symbol in ['NAS100']:
-            return price1 - price2
+            return abs(price1 - price2) * 100
+        elif symbol in ['XAUUSD', 'XAGUSD']:
+            return abs(price1 - price2) * 10
+        elif symbol.startswith('US') or symbol in ['NAS100', 'UK100', 'DE40']:
+            # Indices: 1 pip = 1 point (e.g., US30: 46743.0 -> 46744.0 = 1 pip)
+            return abs(price1 - price2)
         else:
-            return (price1 - price2) * 10000
+            # Standard currency pairs: 0.0001 = 1 pip
+            return abs(price1 - price2) * 10000
     
     def _calculate_spread_pips(self, current_price: Dict, symbol: str) -> float:
         """Calculate current spread in pips"""
@@ -544,8 +546,8 @@ class SignalGenerator:
         spread_buffer = 10  # Extra 10 pips buffer for strict brokers
         total_min_pips = min_pips + spread_buffer
         
-        # Calculate current stop distance in pips
-        current_stop_pips = abs(self._calculate_pips(entry_price, stop_loss, symbol))
+        # Calculate current stop distance in pips  
+        current_stop_pips = self._calculate_pips(entry_price, stop_loss, symbol)
         
         # If stop is too small, adjust it
         if current_stop_pips < total_min_pips:
@@ -579,10 +581,30 @@ class SignalGenerator:
         total_min_pips = min_pips + spread_buffer
         
         # Calculate current TP distance in pips
-        current_tp_pips = abs(self._calculate_pips(entry_price, take_profit, symbol))
+        current_tp_pips = self._calculate_pips(entry_price, take_profit, symbol)
+        
+        # Maximum reasonable take profit distances (broker-friendly)
+        max_tp_pips = {
+            'EURUSD': 300, 'GBPUSD': 350, 'AUDUSD': 300, 'NZDUSD': 250,
+            'USDCHF': 300, 'USDCAD': 350, 'USDJPY': 300,
+            'XAUUSD': 1000, 'XAGUSD': 500,  # Metals can have larger moves
+            'US30': 1500, 'NAS100': 800, 'UK100': 600, 'DE40': 500,  # Indices
+            'default': 400
+        }
+        
+        max_pips = max_tp_pips.get(symbol, max_tp_pips['default'])
         
         # Debug logging
-        self.logger.info(f"{symbol}: TP Check - Current: {current_tp_pips:.1f} pips, Required: {total_min_pips} pips")
+        self.logger.info(f"{symbol}: TP Check - Current: {current_tp_pips:.1f} pips, Required: {total_min_pips} pips, Max: {max_pips} pips")
+        
+        # Cap take profit at maximum reasonable distance
+        if current_tp_pips > max_pips:
+            if take_profit > entry_price:  # TP above entry (long position)
+                take_profit = entry_price + (max_pips / self._get_pip_factor(symbol))
+            else:  # TP below entry (short position)  
+                take_profit = entry_price - (max_pips / self._get_pip_factor(symbol))
+            self.logger.info(f"{symbol}: Capped take profit from {current_tp_pips:.1f} to {max_pips} pips (max allowed)")
+            current_tp_pips = max_pips
         
         # If TP is too small, adjust it
         if current_tp_pips < total_min_pips:

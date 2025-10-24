@@ -1,0 +1,42 @@
+2025-10-23 20:51:12,078 - __main__ - INFO - Loaded 1 symbols from symbols_demo.txt
+2025-10-23 20:51:12,079 - __main__ - INFO - Symbols loaded from symbols_demo.txt: 1 symbols
+2025-10-23 20:51:12,079 - __main__ - INFO - Configuration loaded: 1 symbols, 120s interval
+2025-10-23 20:51:12,080 - __main__ - INFO - Initializing Elliott Wave Trading Engine V2...
+2025-10-23 20:51:12,100 - market_data_manager - INFO - Connected to MT5: MetaTrader 5 Build 5370
+2025-10-23 20:51:12,100 - market_data_manager - INFO - Account: 700350 (Black Bull Group Limited)
+2025-10-23 20:51:12,112 - trade_executor - INFO - Trade Executor connected to account 700350
+2025-10-23 20:51:12,112 - trade_executor - INFO - 📍 Loaded position: XAUUSD 0.01 lots (ID: 85834548)
+2025-10-23 20:51:12,113 - trade_executor - INFO - 📍 Loaded position: XAUUSD 0.01 lots (ID: 85838857)
+2025-10-23 20:51:12,113 - trade_executor - INFO - 📍 Loaded position: XAUUSD 0.01 lots (ID: 85840728)
+2025-10-23 20:51:12,113 - trade_executor - INFO - 📍 Loaded position: XAUUSD 0.01 lots (ID: 85842463)
+2025-10-23 20:51:12,114 - trade_executor - INFO - 📍 Loaded position: US30 0.1 lots (ID: 85846071)
+2025-10-23 20:51:12,114 - trade_executor - INFO - 📍 Loaded position: NAS100 0.1 lots (ID: 85846072)
+2025-10-23 20:51:12,114 - trade_executor - INFO - 📍 Loaded position: AUDUSD 0.02 lots (ID: 85847451)
+2025-10-23 20:51:12,115 - trade_executor - INFO - 📍 Loaded position: NZDUSD 0.03 lots (ID: 85847453)
+2025-10-23 20:51:12,115 - trade_executor - INFO - 📍 Loaded position: US30 0.1 lots (ID: 85847454)
+2025-10-23 20:51:12,116 - trade_executor - INFO - 📍 Loaded position: NAS100 0.1 lots (ID: 85847455)
+2025-10-23 20:51:12,116 - trade_executor - INFO - 📍 Loaded position: AUDUSD 0.02 lots (ID: 85849110)
+2025-10-23 20:51:12,117 - trade_executor - INFO - 📍 Loaded position: NZDUSD 0.03 lots (ID: 85849137)
+2025-10-23 20:51:12,117 - trade_executor - INFO - 📍 Loaded position: US30 0.1 lots (ID: 85849143)
+2025-10-23 20:51:12,117 - trade_executor - INFO - 📍 Loaded position: NAS100 0.1 lots (ID: 85849146)
+2025-10-23 20:51:12,118 - trade_executor - INFO - 📍 Loaded position: AUDUSD 0.02 lots (ID: 85850436)
+2025-10-23 20:51:12,118 - trade_executor - INFO - 📍 Loaded position: NZDUSD 0.03 lots (ID: 85850446)
+2025-10-23 20:51:12,119 - trade_executor - INFO - 📍 Loaded position: US30 0.1 lots (ID: 85850447)
+2025-10-23 20:51:12,119 - trade_executor - INFO - 📍 Loaded position: NAS100 0.1 lots (ID: 85850448)
+2025-10-23 20:51:12,120 - trade_executor - INFO - Loaded 18 existing Elliott Wave positions
+2025-10-23 20:51:12,120 - __main__ - INFO - EURUSD validated
+2025-10-23 20:51:12,120 - __main__ - INFO - Elliott Wave Trading Engine V2 initialized successfully
+2025-10-23 20:51:12,121 - __main__ - INFO - Symbols: EURUSD
+2025-10-23 20:51:12,121 - __main__ - INFO - Scan interval: 60s
+2025-10-23 20:51:12,131 - __main__ - INFO - Elliott Wave Trading Engine V2 started
+2025-10-23 20:51:12,149 - signal_generator - INFO - DEBUG EURUSD: Impulse type=<class 'elliott_wave_engine_original.Impulse'>, has_wave_3_end=True, has_confidence=True
+2025-10-23 20:51:12,149 - signal_generator - INFO - DEBUG EURUSD: ABC type=<class 'elliott_wave_engine_original.ABC'>, has_a_end=True, has_confidence=True
+2025-10-23 20:51:12,149 - signal_generator - INFO - EURUSD: TP Check - Current: 1.9 pips, Required: 70 pips, Max: 300 pips
+2025-10-23 20:51:12,150 - signal_generator - INFO - EURUSD: Adjusted take profit from 1.9 to 70 pips (min: 60 + buffer: 10)
+2025-10-23 20:51:12,152 - signal_generator - INFO - 🎯 EURUSD Signal: BUY (1) - Confidence: 90.0% ML: 0.460
+2025-10-23 20:52:08,352 - __main__ - INFO - ⚠️ Shutdown requested by user
+2025-10-23 20:52:08,352 - __main__ - INFO - 🔄 Initiating graceful shutdown...
+2025-10-23 20:52:12,153 - __main__ - INFO - Elliott Wave Trading Engine V2 stopped
+2025-10-23 20:52:12,154 - market_data_manager - INFO - MT5 connection closed
+2025-10-23 20:52:12,155 - trade_executor - INFO - Trade Executor disconnected
+2025-10-23 20:52:12,156 - __main__ - INFO - ✅ Elliott Wave Trading Engine V2 shutdown complete

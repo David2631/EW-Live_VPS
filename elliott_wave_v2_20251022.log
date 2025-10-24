@@ -316,3 +316,46 @@
 2025-10-22 16:47:52,107 - market_data_manager - INFO - MT5 connection closed
 2025-10-22 16:47:52,108 - trade_executor - INFO - Trade Executor disconnected
 2025-10-22 16:47:52,108 - __main__ - INFO - ✅ Elliott Wave Trading Engine V2 shutdown complete
+2025-10-22 16:55:59,703 - __main__ - INFO - Loaded 17 symbols from symbols.txt
+2025-10-22 16:55:59,704 - __main__ - INFO - Symbols loaded from symbols.txt: 17 symbols
+2025-10-22 16:55:59,705 - __main__ - INFO - Configuration loaded: 17 symbols, 60s interval
+2025-10-22 16:55:59,705 - __main__ - INFO - Initializing Elliott Wave Trading Engine V2...
+2025-10-22 16:55:59,726 - market_data_manager - INFO - Connected to MT5: MetaTrader 5 Build 5370
+2025-10-22 16:55:59,726 - market_data_manager - INFO - Account: 5041503698 (MetaQuotes Ltd.)
+2025-10-22 16:55:59,742 - trade_executor - INFO - Trade Executor connected to account 5041503698
+2025-10-22 16:55:59,743 - trade_executor - INFO - Loaded 4 existing Elliott Wave positions
+2025-10-22 16:55:59,743 - __main__ - INFO - EURUSD validated
+2025-10-22 16:55:59,744 - __main__ - INFO - GBPUSD validated
+2025-10-22 16:55:59,744 - __main__ - INFO - AUDUSD validated
+2025-10-22 16:55:59,745 - __main__ - INFO - NZDUSD validated
+2025-10-22 16:55:59,745 - __main__ - INFO - USDCHF validated
+2025-10-22 16:55:59,745 - __main__ - INFO - USDCAD validated
+2025-10-22 16:55:59,746 - __main__ - INFO - XAUUSD validated
+2025-10-22 16:55:59,746 - __main__ - INFO - XAGUSD validated
+2025-10-22 16:55:59,747 - __main__ - INFO - US30 validated
+2025-10-22 16:55:59,747 - market_data_manager - WARNING - Symbol NAS100 not found
+2025-10-22 16:55:59,748 - __main__ - WARNING - NAS100 not available
+2025-10-22 16:55:59,748 - market_data_manager - WARNING - Symbol US500.F not found
+2025-10-22 16:55:59,749 - __main__ - WARNING - US500.F not available
+2025-10-22 16:55:59,749 - __main__ - INFO - DE40 validated
+2025-10-22 16:55:59,750 - __main__ - INFO - UK100 validated
+2025-10-22 16:55:59,751 - market_data_manager - WARNING - Symbol FR40 not found
+2025-10-22 16:55:59,751 - __main__ - WARNING - FR40 not available
+2025-10-22 16:55:59,751 - __main__ - INFO - AUDNOK validated
+2025-10-22 16:55:59,751 - __main__ - INFO - EURNOK validated
+2025-10-22 16:55:59,752 - __main__ - INFO - EURAUD validated
+2025-10-22 16:55:59,752 - __main__ - INFO - Elliott Wave Trading Engine V2 initialized successfully
+2025-10-22 16:55:59,752 - __main__ - INFO - Symbols: EURUSD, GBPUSD, AUDUSD, NZDUSD, USDCHF, USDCAD, XAUUSD, XAGUSD, US30, DE40, UK100, AUDNOK, EURNOK, EURAUD
+2025-10-22 16:55:59,753 - __main__ - INFO - Scan interval: 60s
+2025-10-22 16:55:59,762 - __main__ - INFO - 📊 Status Update:
+2025-10-22 16:55:59,762 - __main__ - INFO - Elliott Wave Trading Engine V2 started
+2025-10-22 16:55:59,763 - __main__ - INFO -    Positions: 4 (Long: 1, Short: 3)
+2025-10-22 16:55:59,763 - __main__ - INFO -    P&L: $24.99
+2025-10-22 16:55:59,764 - __main__ - INFO -    Portfolio Risk: 0.0%
+2025-10-22 16:55:59,766 - __main__ - INFO -    Signals: 0 | Trades: 0
+2025-10-22 16:55:59,797 - signal_generator - ERROR - Signal generation error for GBPUSD: 'ABC' object has no attribute 'a_end'
+2025-10-22 16:55:59,813 - signal_generator - ERROR - Signal generation error for AUDUSD: 'Impulse' object has no attribute 'wave_3_end'
+2025-10-22 16:55:59,826 - signal_generator - ERROR - Signal generation error for NZDUSD: 'Impulse' object has no attribute 'wave_3_end'
+2025-10-22 16:55:59,863 - signal_generator - ERROR - Signal generation error for XAUUSD: 'Impulse' object has no attribute 'wave_3_end'
+2025-10-22 16:55:59,884 - signal_generator - ERROR - Signal generation error for US30: 'Impulse' object has no attribute 'wave_3_end'
+2025-10-22 16:55:59,939 - signal_generator - ERROR - Signal generation error for EURAUD: 'Impulse' object has no attribute 'wave_3_end'
