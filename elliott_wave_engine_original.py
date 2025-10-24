@@ -33,6 +33,16 @@ class Impulse:
     def wave_5_end(self) -> Optional[Pivot]:
         """Return Wave 5 end pivot (should be pivot[5])"""
         return self.pivots[5] if len(self.pivots) >= 6 else None
+        
+    @property
+    def wave_3_end(self) -> Optional[Pivot]:
+        """Return Wave 3 end pivot (should be pivot[3])"""
+        return self.pivots[3] if len(self.pivots) >= 4 else None
+        
+    @property
+    def wave_4_end(self) -> Optional[Pivot]:
+        """Return Wave 4 end pivot (should be pivot[4])"""
+        return self.pivots[4] if len(self.pivots) >= 5 else None
 
 @dataclass
 class ABC:
@@ -44,6 +54,11 @@ class ABC:
     def c_end(self) -> Optional[Pivot]:
         """Return C wave end pivot (should be pivot[3])"""
         return self.pivots[3] if len(self.pivots) >= 4 else None
+        
+    @property
+    def a_end(self) -> Optional[Pivot]:
+        """Return A wave end pivot (should be pivot[1])"""
+        return self.pivots[1] if len(self.pivots) >= 2 else None
 
 @dataclass 
 class ElliottWavePattern:

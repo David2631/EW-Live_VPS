@@ -310,6 +310,15 @@ class TradeExecutor:
                     self.active_positions[position.position_id] = position
                     self.logger.info(f"✅ Position opened: {signal.symbol} {signal.signal_type.value} "
                                    f"{position_size.lot_size} lots at {result.price:.5f}")
+                
+                # CRITICAL: Set SL/TP for stocks AFTER position opening
+                if is_stock and result.success:
+                    self.logger.info(f"🔒 Setting SL/TP for stock position {signal.symbol}...")
+                    sl_tp_result = self._set_position_sl_tp(result.order, signal.symbol, validated_sl, validated_tp)
+                    if sl_tp_result:
+                        self.logger.info(f"✅ SL/TP set: SL={validated_sl:.5f}, TP={validated_tp:.5f}")
+                    else:
+                        self.logger.error(f"❌ Failed to set SL/TP for {signal.symbol}")
             
             return result
             
@@ -543,6 +552,9 @@ class TradeExecutor:
                     positions_near_sl.append(pos.symbol)
                 if pos.current_price <= pos.take_profit * 1.002:
                     positions_near_tp.append(pos.symbol)
+        
+        # Check for positions without SL/TP
+        self._fix_positions_without_sl_tp()
         
         return {
             'total_positions': total_positions,
@@ -827,6 +839,104 @@ class TradeExecutor:
         except Exception as e:
             self.logger.error(f"Error checking existing positions for {symbol}: {e}")
             return False  # Assume no position on error to allow trading
+
+    def _fix_positions_without_sl_tp(self):
+        """Find and fix positions without Stop Loss or Take Profit"""
+        try:
+            # Get all current MT5 positions
+            positions = mt5.positions_get()
+            if not positions:
+                return
+            
+            positions_fixed = 0
+            for pos in positions:
+                # Only check our Elliott Wave positions
+                if pos.magic != self.magic_number:
+                    continue
+                
+                # Check if position is missing SL or TP
+                if pos.sl == 0.0 or pos.tp == 0.0:
+                    self.logger.warning(f"🚨 Position {pos.symbol} missing SL/TP: SL={pos.sl}, TP={pos.tp}")
+                    
+                    # Try to calculate appropriate SL/TP based on current price and symbol
+                    sl, tp = self._calculate_emergency_sl_tp(pos)
+                    
+                    if sl and tp:
+                        if self._set_position_sl_tp(pos.ticket, pos.symbol, sl, tp):
+                            positions_fixed += 1
+                            self.logger.info(f"🔧 Fixed SL/TP for {pos.symbol}: SL={sl:.5f}, TP={tp:.5f}")
+                        else:
+                            self.logger.error(f"❌ Failed to fix SL/TP for {pos.symbol}")
+            
+            if positions_fixed > 0:
+                self.logger.info(f"✅ Fixed {positions_fixed} positions without SL/TP")
+                
+        except Exception as e:
+            self.logger.error(f"Error fixing positions without SL/TP: {e}")
+
+    def _calculate_emergency_sl_tp(self, position) -> Tuple[Optional[float], Optional[float]]:
+        """Calculate emergency SL/TP for position without them"""
+        try:
+            # Get current market price
+            symbol_info = mt5.symbol_info(position.symbol)
+            if not symbol_info:
+                return None, None
+            
+            current_price = symbol_info.bid if position.type == 0 else symbol_info.ask
+            point = symbol_info.point
+            
+            # Calculate conservative SL/TP (50 pips SL, 100 pips TP)
+            if position.type == 0:  # Buy position
+                stop_loss = current_price - (50 * point * 10)  # 50 pips below
+                take_profit = current_price + (100 * point * 10)  # 100 pips above
+            else:  # Sell position
+                stop_loss = current_price + (50 * point * 10)  # 50 pips above
+                take_profit = current_price - (100 * point * 10)  # 100 pips below
+            
+            # Round to symbol's tick size
+            tick_size = symbol_info.trade_tick_size
+            stop_loss = round(stop_loss / tick_size) * tick_size
+            take_profit = round(take_profit / tick_size) * tick_size
+            
+            return stop_loss, take_profit
+            
+        except Exception as e:
+            self.logger.error(f"Error calculating emergency SL/TP for {position.symbol}: {e}")
+            return None, None
+
+    def _set_position_sl_tp(self, position_id: int, symbol: str, stop_loss: float, take_profit: float) -> bool:
+        """Set Stop Loss and Take Profit for an existing position"""
+        try:
+            # Prepare position modification request
+            request = {
+                "action": mt5.TRADE_ACTION_SLTP,
+                "position": position_id,
+                "symbol": symbol,
+                "sl": stop_loss,
+                "tp": take_profit,
+                "magic": self.magic_number,
+                "comment": "EW_SLTP_Update"
+            }
+            
+            # Send modification request
+            result = mt5.order_send(request)
+            
+            if result is None:
+                error = mt5.last_error()
+                self.logger.error(f"❌ Failed to set SL/TP for {symbol}: {error}")
+                return False
+            
+            if result.retcode == mt5.TRADE_RETCODE_DONE:
+                self.logger.info(f"✅ SL/TP successfully set for {symbol} (Position {position_id})")
+                return True
+            else:
+                error_msg = self._get_retcode_description(result.retcode)
+                self.logger.error(f"❌ SL/TP modification failed for {symbol}: {error_msg}")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"Exception setting SL/TP for {symbol}: {e}")
+            return False
 
 if __name__ == "__main__":
     # Test trade executor

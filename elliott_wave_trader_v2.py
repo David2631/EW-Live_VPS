@@ -220,6 +220,18 @@ class ElliottWaveTradingEngine:
                     time.sleep(60)  # Check every minute during off-hours
                     continue
                 
+                # Update active positions before scanning - Direct MT5 query
+                import MetaTrader5 as mt5
+                mt5_positions = mt5.positions_get()
+                active_symbols = set()
+                
+                if mt5_positions:
+                    for pos in mt5_positions:
+                        active_symbols.add(pos.symbol)
+                        
+                self.signal_generator.update_active_positions(active_symbols)
+                self.logger.info(f"📊 Active positions: {sorted(list(active_symbols)) if active_symbols else 'None'}")
+                
                 # Complete symbol scan
                 scan_start = time.time()
                 self.logger.info(f"🔄 Starting complete scan of all {len(self.config['symbols'])} symbols...")
@@ -296,20 +308,28 @@ class ElliottWaveTradingEngine:
                 self.last_analysis_time[symbol] = now
                 return
             
-            # Risk management check
+            # Risk management check - USE REAL ACCOUNT BALANCE
             symbol_info = self.market_data.get_symbol_info(symbol)
+            
+            # Get real-time account balance from MT5
+            real_balance = self.trade_executor.get_account_balance()
+            if real_balance is None:
+                self.logger.error(f"❌ {symbol}: Could not get account balance - using config fallback")
+                real_balance = self.config['account_balance']
+            
+            # Auto-adjust position size based on available balance
             position_size = self.risk_manager.calculate_position_size(
                 symbol=symbol,
-                account_balance=self.config['account_balance'],
+                account_balance=real_balance,
                 entry_price=signal.entry_price,
                 stop_loss_price=signal.stop_loss,
                 take_profit_price=signal.take_profit,
                 symbol_info=symbol_info
             )
             
-            # Portfolio risk check
+            # Portfolio risk check with real balance
             can_trade, risk_reason = self.risk_manager.check_portfolio_risk(
-                position_size, self.config['account_balance']
+                position_size, real_balance
             )
             
             if not can_trade:
@@ -421,9 +441,15 @@ class ElliottWaveTradingEngine:
     
     def _log_status_update(self, position_status: Dict):
         """Log regular status updates"""
-        risk_metrics = self.risk_manager.get_risk_metrics(self.config['account_balance'])
+        # Use real balance for risk metrics
+        real_balance = self.trade_executor.get_account_balance()
+        if real_balance is None:
+            real_balance = self.config['account_balance']
+            
+        risk_metrics = self.risk_manager.get_risk_metrics(real_balance)
         
         self.logger.info(f"📊 Status Update:")
+        self.logger.info(f"   Account Balance: ${real_balance:.2f}")
         self.logger.info(f"   Positions: {position_status['total_positions']} "
                         f"(Long: {position_status['long_positions']}, Short: {position_status['short_positions']})")
         self.logger.info(f"   P&L: ${position_status['total_profit']:.2f}")
@@ -451,7 +477,13 @@ class ElliottWaveTradingEngine:
     def get_performance_report(self) -> Dict:
         """Get comprehensive performance report"""
         position_status = self.trade_executor.monitor_positions()
-        risk_metrics = self.risk_manager.get_risk_metrics(self.config['account_balance'])
+        
+        # Use real balance for performance metrics
+        real_balance = self.trade_executor.get_account_balance()
+        if real_balance is None:
+            real_balance = self.config['account_balance']
+            
+        risk_metrics = self.risk_manager.get_risk_metrics(real_balance)
         
         session_duration = (datetime.now() - self.trading_session_start).total_seconds() / 3600
         
